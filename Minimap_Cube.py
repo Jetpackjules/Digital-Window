@@ -1,12 +1,23 @@
 import cv2
 import numpy as np
+from collections import deque
+from cube_render import CubeVisualizer# Assuming CubeVisualizer is in a separate file
+import math
+from PyQt5.QtWidgets import QApplication
+app = QApplication([])
+
+
+# Define the size of the deque for smoothing
+SMOOTHING_SIZE = 5
+yaw_values = deque(maxlen=SMOOTHING_SIZE)
+
 
 #important variables:
 markerLength = 0.1 #meters
 
 # Minimap resolution
-MINIMAP_WIDTH = 640
-MINIMAP_HEIGHT = 480
+MINIMAP_WIDTH = 720
+MINIMAP_HEIGHT = 1080
 
 #shrink resolution?
 shrink = True
@@ -14,6 +25,9 @@ shrink = True
 
 # Camera resolution
 cap = cv2.VideoCapture(0)
+
+
+
 WIDTH = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))  # Change this to your desired width
 HEIGHT = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # Change this to your desired height
 print(f"Detected webcam resolution: {WIDTH}x{HEIGHT}")
@@ -36,6 +50,11 @@ if shrink:
 
 dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
 
+default_yaw = 0
+default_pitch = 0
+default_roll = 0
+
+
 
 fx = fy = 1400  # This is a rough estimate and might need adjustment
 cx = WIDTH / 2
@@ -44,11 +63,14 @@ cy = HEIGHT / 2
 cameraMatrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float64)
 distCoeffs = np.zeros((5,1), dtype=np.float64)
 
+cube = CubeVisualizer()
+
 while True:
     ret, frame = cap.read()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, dictionary)
     mirrored_frame = cv2.flip(frame, 1)  # Create a mirrored version for display
+    cube.setRotation(default_yaw, default_pitch, default_roll)
 
 
     mini_map = np.zeros((MINIMAP_HEIGHT, MINIMAP_WIDTH, 3), dtype=np.uint8)
@@ -66,9 +88,20 @@ while True:
         # For simplicity, consider the first detected marker for the mini-map
         rvec = rvecs[0]
         tvec = tvecs[0]
+        # After estimating the pose:
+        # rvec = rvecs[0]
 
+        # Check and adjust the Z component of the rotation vector
+        print("Shape of rvec:", rvec.shape)
+        print("rvec:", rvec)
+        if rvec[0][1] < 0:
+            rvec[0][1] = -rvec[0][1]
+        
         # Convert rotation vector to Euler angles for 2D rotation
         yaw = -cv2.Rodrigues(rvec)[0][2][0]
+        # Inside the loop, after calculating the yaw:
+        yaw_values.append(yaw)
+        smoothed_yaw = sum(yaw_values) / len(yaw_values)
 
         # Calculate arrow's position on the minimap
         position_x = int((MINIMAP_WIDTH/2 + tvec[0][0] * MINIMAP_WIDTH/2))  # Centered and scaled
@@ -82,7 +115,8 @@ while True:
 
         position = (position_x, position_y)
 
-        draw_arrow(mini_map, position, yaw)
+        draw_arrow(mini_map, position, smoothed_yaw)
+
 
         # Draw the rotation vectors on the frame
         for i in range(len(rvecs)):
@@ -113,11 +147,30 @@ while True:
             # Display the distance on the frame
             cv2.putText(mirrored_frame, text, (text_offset_x, text_offset_y), font, font_scale, font_color, font_thickness, lineType=cv2.LINE_AA)
 
-    
+
+        # Convert rotation vector to Euler angles AND APPLY TO CUUUUBE
+        # At the beginning of the while loop
+
+
+        matrix, _ = cv2.Rodrigues(rvec)
+        pitch, yaw, roll = cv2.decomposeProjectionMatrix(matrix)[-1]
+        pitch = math.radians(pitch)
+        yaw = math.radians(yaw)
+        roll = math.radians(roll)
+
+        # Set the cube's rotation
+        cube.setRotation(yaw, pitch, roll)
+
+        
+        mirrored_frame = cv2.addWeighted(mirrored_frame, 1, cube_frame, 0.6, 0)
+
+    # cube_frame = cube.render()
     cv2.imshow('Frame', mirrored_frame)
     cv2.imshow('Mini-Map', mini_map)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
+        app.exec_()
+
         break
 
 cap.release()
