@@ -6,7 +6,7 @@ import numpy as np
 #pip install opencv-contrib-python==4.7.0.68
 
 # Initialize the webcam feed
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     
 # Set the resolution to 640x480 (adjust if needed)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)

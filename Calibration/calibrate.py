@@ -7,12 +7,12 @@ import cv2
 ARUCO_DICT = cv2.aruco.DICT_6X6_250
 SQUARES_VERTICALLY = 7
 SQUARES_HORIZONTALLY = 5
-SQUARE_LENGTH = 0.03
-MARKER_LENGTH = 0.015
+SQUARE_LENGTH = 0.036
+MARKER_LENGTH = 0.018
 # ...
 PATH_TO_YOUR_IMAGES = 'Calibration/Images'
 
-NAME = "Phone_Cam" # cam name
+NAME = "Desktop_Webcam" # cam name
 # ------------------------------
 
 def calibrate_and_save_parameters():

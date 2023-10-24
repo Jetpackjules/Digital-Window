@@ -9,8 +9,7 @@ detector = dlib.get_frontal_face_detector()
 panorama = cv2.imread('bryan-goff-IuyhXAia8EA-unsplash.jpg')
 
 # Initialize webcam
-cap = cv2.VideoCapture(0)
-
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 window_width = 640  # Define the width of the window
 window_height = 480  # Define the height of the window
 

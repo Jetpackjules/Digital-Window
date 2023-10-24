@@ -1,33 +1,48 @@
 import cv2
 import numpy as np
 from collections import deque
-from cube_render import CubeVisualizer# Assuming CubeVisualizer is in a separate file
-import math
-from PyQt5.QtWidgets import QApplication
-app = QApplication([])
 
+from Calibration import monitor_info
 
-# Define the size of the deque for smoothing
-SMOOTHING_SIZE = 5
-yaw_values = deque(maxlen=SMOOTHING_SIZE)
+# pip install screeninfo
 
+from cube_folder import cube_render
+cube_render.asynchronous_create_window()
+
+# Offset to lower everything in the mini-map
+Y_OFFSET = 400
 
 #important variables:
-markerLength = 0.1 #meters
+#big one is 7cm
+markerLength = 0.048 #meters
 
 # Minimap resolution
 MINIMAP_WIDTH = 720
 MINIMAP_HEIGHT = 1080
 
+
+# Monitor dimensions in meters (assuming 28 inches diagonal and 16:9 aspect ratio)
+# MONITOR_WIDTH = 0.621
+MONITOR_WIDTH, MONITOR_HEIGHT = monitor_info.get_monitor_dimensions()
+
+# Scale factor for the mini-map
+SCALE_X = MINIMAP_WIDTH / 2.0
+
+monitor_width_scaled = MONITOR_WIDTH * SCALE_X
+
+
+X_SCALING_FACTOR = 3  # Adjust this value to increase or decrease the side-to-side movement
+
+
+# Define the size of the deque for smoothing
+SMOOTHING_SIZE = 5
+yaw_values = deque(maxlen=SMOOTHING_SIZE)
 #shrink resolution?
-shrink = True
+shrink = False
 
 
 # Camera resolution
-cap = cv2.VideoCapture(0)
-
-
-
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 WIDTH = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))  # Change this to your desired width
 HEIGHT = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # Change this to your desired height
 print(f"Detected webcam resolution: {WIDTH}x{HEIGHT}")
@@ -44,16 +59,12 @@ if shrink:
     WIDTH = 640
     HEIGHT = 480
 
+
 # cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
 # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
 
 
 dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
-
-default_yaw = 0
-default_pitch = 0
-default_roll = 0
-
 
 
 fx = fy = 1400  # This is a rough estimate and might need adjustment
@@ -62,18 +73,71 @@ cy = HEIGHT / 2
 
 cameraMatrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float64)
 distCoeffs = np.zeros((5,1), dtype=np.float64)
+NAME = "Desktop_Webcam"
+# cameraMatrix = np.load('Calibration/'+NAME+'camera_matrix.npy')
+# distCoeffs = np.load('Calibration/'+NAME+'dist_coeffs.npy')
 
-cube = CubeVisualizer()
+def draw_vision_cone(image, position, angle, length, width, color):
+    return
+
+    # Calculate the end point of the cone
+    end_point_cone = (int(position[0] + length * np.sin(angle)), int(position[1] - length * np.cos(angle)))
+    
+    # Calculate the angles for the left and right boundaries of the cone
+    half_angle = np.radians(width / 2)  # Half of 135 degrees in radians
+    left_angle = angle - half_angle
+    right_angle = angle + half_angle
+    
+    # Calculate the left and right boundaries of the cone
+    left_end = (int(position[0] + length * np.sin(left_angle)), int(position[1] - length * np.cos(left_angle)))
+    right_end = (int(position[0] + length * np.sin(right_angle)), int(position[1] - length * np.cos(right_angle)))
+    
+    # Draw the cone
+    cv2.fillPoly(image, [np.array([position, left_end, right_end])], color)
+
+
+def draw_lines_to_monitor(image, arrow_tip, monitor_start, monitor_end, color):
+    # Calculate the intersection points of the line from the arrow tip to the monitor sides with the edges of the minimap
+    def intersection_with_edges(point1, point2, width, height):
+        # Line equation: y = m*x + b
+        if point2[0] - point1[0] == 0:  # Vertical line
+            return [(point2[0], 0), (point2[0], height)]
+        m = (point2[1] - point1[1]) / (point2[0] - point1[0])
+        b = point1[1] - m * point1[0]
+        
+        # Calculate intersection with each edge
+        top_intersection = (-b / m, 0)
+        bottom_intersection = ((height - b) / m, height)
+        left_intersection = (0, b)
+        right_intersection = (width, m * width + b)
+        
+        # Return the two intersection points that are within the minimap boundaries
+        intersections = [top_intersection, bottom_intersection, left_intersection, right_intersection]
+        return [point for point in intersections if 0 <= point[0] <= width and 0 <= point[1] <= height]
+
+    left_intersections = intersection_with_edges(arrow_tip, monitor_start, image.shape[1], image.shape[0])
+    right_intersections = intersection_with_edges(arrow_tip, monitor_end, image.shape[1], image.shape[0])
+    
+    # Draw the lines
+    cv2.line(image, arrow_tip, tuple(map(int, left_intersections[0])), color, 2)
+    cv2.line(image, arrow_tip, tuple(map(int, right_intersections[0])), color, 2)
 
 while True:
     ret, frame = cap.read()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, dictionary)
     mirrored_frame = cv2.flip(frame, 1)  # Create a mirrored version for display
-    cube.setRotation(default_yaw, default_pitch, default_roll)
 
 
     mini_map = np.zeros((MINIMAP_HEIGHT, MINIMAP_WIDTH, 3), dtype=np.uint8)
+
+    # Calculate the start and end points of the monitor line on the mini-map
+    # Position the line at the top of the mini-map with the offset
+    start_point = (int(MINIMAP_WIDTH/2 - monitor_width_scaled/2), 10 + Y_OFFSET)
+    end_point = (int(MINIMAP_WIDTH/2 + monitor_width_scaled/2), 10 + Y_OFFSET)
+    
+    # Draw the monitor as a line on the mini-map
+    cv2.line(mini_map, start_point, end_point, (255, 255, 255), 2)  # White line
 
 
     if len(corners) > 0:
@@ -92,8 +156,8 @@ while True:
         # rvec = rvecs[0]
 
         # Check and adjust the Z component of the rotation vector
-        print("Shape of rvec:", rvec.shape)
-        print("rvec:", rvec)
+        # print("Shape of rvec:", rvec.shape)
+        # print("rvec:", rvec)
         if rvec[0][1] < 0:
             rvec[0][1] = -rvec[0][1]
         
@@ -104,8 +168,10 @@ while True:
         smoothed_yaw = sum(yaw_values) / len(yaw_values)
 
         # Calculate arrow's position on the minimap
-        position_x = int((MINIMAP_WIDTH/2 + tvec[0][0] * MINIMAP_WIDTH/2))  # Centered and scaled
+        # position_x = int((MINIMAP_WIDTH/2 + tvec[0][0] * MINIMAP_WIDTH/2))  # Centered and scaled
         position_y = int(tvec[0][2] * MINIMAP_HEIGHT/2)
+
+        position_x = int((MINIMAP_WIDTH/2 + tvec[0][0] * MINIMAP_WIDTH/2 * X_SCALING_FACTOR))  # Centered and scaled with the factor
 
 
         # Adjust x position based on distance to camera to account for the vision cone effect
@@ -113,11 +179,27 @@ while True:
 
         position_x += int(fov_adjustment)
 
-        position = (position_x, position_y)
+        position = (position_x, position_y + Y_OFFSET)
+
+                
+        # Draw the vision cone
+        cone_length = 3000
+        cone_width = 90
+        cone_color = (0, 255, 255)  # Yellow
+
+        draw_vision_cone(mini_map, position, smoothed_yaw, cone_length, cone_width, cone_color)
+
+        # Draw the lines from the arrow tip to the monitor sides
+        line_color = (255, 0, 0)  # Blue
+        arrow_tip = (int(position[0] + 50 * np.sin(smoothed_yaw)), int(position[1] - 50 * np.cos(smoothed_yaw)))
+        draw_lines_to_monitor(mini_map, arrow_tip, start_point, end_point, line_color)
+ 
+
 
         draw_arrow(mini_map, position, smoothed_yaw)
-
-
+        print(tvec[0][0])
+        cube_render.update_perspective(-tvec[0][0]*10, -tvec[0][2])
+        
         # Draw the rotation vectors on the frame
         for i in range(len(rvecs)):
             mirrored_frame = cv2.drawFrameAxes(mirrored_frame, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 0.03)
@@ -147,31 +229,14 @@ while True:
             # Display the distance on the frame
             cv2.putText(mirrored_frame, text, (text_offset_x, text_offset_y), font, font_scale, font_color, font_thickness, lineType=cv2.LINE_AA)
 
-
-        # Convert rotation vector to Euler angles AND APPLY TO CUUUUBE
-        # At the beginning of the while loop
-
-
-        matrix, _ = cv2.Rodrigues(rvec)
-        pitch, yaw, roll = cv2.decomposeProjectionMatrix(matrix)[-1]
-        pitch = math.radians(pitch)
-        yaw = math.radians(yaw)
-        roll = math.radians(roll)
-
-        # Set the cube's rotation
-        cube.setRotation(yaw, pitch, roll)
-
-        
-        mirrored_frame = cv2.addWeighted(mirrored_frame, 1, cube_frame, 0.6, 0)
-
-    # cube_frame = cube.render()
+    
     cv2.imshow('Frame', mirrored_frame)
     cv2.imshow('Mini-Map', mini_map)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        app.exec_()
-
         break
+
+
 
 cap.release()
 cv2.destroyAllWindows()

@@ -33,7 +33,8 @@ shrink = False
 
 
 # Camera resolution
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
 WIDTH = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))  # Change this to your desired width
 HEIGHT = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # Change this to your desired height
 print(f"Detected webcam resolution: {WIDTH}x{HEIGHT}")
@@ -64,6 +65,9 @@ cy = HEIGHT / 2
 
 cameraMatrix = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float64)
 distCoeffs = np.zeros((5,1), dtype=np.float64)
+NAME = "Desktop_Webcam"
+# cameraMatrix = np.load('Calibration/'+NAME+'camera_matrix.npy')
+# distCoeffs = np.load('Calibration/'+NAME+'dist_coeffs.npy')
 
 def draw_vision_cone(image, position, angle, length, width, color):
     return

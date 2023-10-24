@@ -18,6 +18,7 @@ MARGIN_PX = 20     # size of the margin in pixels
 SAVE_NAME = 'Calibration/ChArUco_Marker.png'
 # ------------------------------
 
+# opencv-contrib-python==4.7.0.68
 def create_and_save_new_board():
     dictionary = cv2.aruco.getPredefinedDictionary(ARUCO_DICT)
     board = cv2.aruco.CharucoBoard((SQUARES_VERTICALLY, SQUARES_HORIZONTALLY), SQUARE_LENGTH, MARKER_LENGTH, dictionary)
