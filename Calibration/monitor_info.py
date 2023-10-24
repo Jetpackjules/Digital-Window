@@ -14,11 +14,11 @@ def get_monitor_dimensions():
         monitor = monitors[0]  # Get the primary monitor
         width = monitor.width
         height = monitor.height
-        return (width/dpi)*2.54/100, (height/dpi)*2.54/100
+        return (width/dpi)*2.54/100, (height/dpi)*2.54/100, dpi
     else:
         raise Exception("No monitors detected!")
 
-width, height = get_monitor_dimensions()
+width, height, dpi = get_monitor_dimensions()
 print(f"Monitor Width: {width} m")
 print(f"Monitor Height: {height} m")
 print("MONITOR RESOLUTION IN INCHES: ", round(math.sqrt((width*100/2.54)**2 + (height*100/2.54)**2)))

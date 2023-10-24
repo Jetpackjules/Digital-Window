@@ -7,7 +7,9 @@ from Calibration import monitor_info
 # pip install screeninfo
 
 from cube_folder import cube_render
-cube_render.asynchronous_create_window()
+import threading
+threading.Thread(target=cube_render.create_window).start()
+# cube_render.asynchronous_create_window()
 
 # Offset to lower everything in the mini-map
 Y_OFFSET = 400
@@ -23,7 +25,7 @@ MINIMAP_HEIGHT = 1080
 
 # Monitor dimensions in meters (assuming 28 inches diagonal and 16:9 aspect ratio)
 # MONITOR_WIDTH = 0.621
-MONITOR_WIDTH, MONITOR_HEIGHT = monitor_info.get_monitor_dimensions()
+MONITOR_WIDTH, MONITOR_HEIGHT, dpi = monitor_info.get_monitor_dimensions()
 
 # Scale factor for the mini-map
 SCALE_X = MINIMAP_WIDTH / 2.0
@@ -197,8 +199,9 @@ while True:
 
 
         draw_arrow(mini_map, position, smoothed_yaw)
-        print(tvec[0][0])
-        cube_render.update_perspective(-tvec[0][0]*10, -tvec[0][2])
+        print()
+
+        cube_render.update_perspective(-tvec[0][0]*10, tvec[0][1]*10, tvec[0][2])
         
         # Draw the rotation vectors on the frame
         for i in range(len(rvecs)):
