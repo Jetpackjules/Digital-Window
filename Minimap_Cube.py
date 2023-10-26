@@ -7,6 +7,7 @@ from Calibration import monitor_info
 # pip install screeninfo
 
 from cube_folder import cube_render
+
 import threading
 threading.Thread(target=cube_render.create_window).start()
 # cube_render.asynchronous_create_window()
@@ -16,7 +17,8 @@ Y_OFFSET = 400
 
 #important variables:
 #big one is 7cm
-markerLength = 0.048 #meters
+#med is .048 Mcc
+markerLength = 0.07 #meters
 
 # Minimap resolution
 MINIMAP_WIDTH = 720
@@ -79,23 +81,6 @@ NAME = "Desktop_Webcam"
 # cameraMatrix = np.load('Calibration/'+NAME+'camera_matrix.npy')
 # distCoeffs = np.load('Calibration/'+NAME+'dist_coeffs.npy')
 
-def draw_vision_cone(image, position, angle, length, width, color):
-    return
-
-    # Calculate the end point of the cone
-    end_point_cone = (int(position[0] + length * np.sin(angle)), int(position[1] - length * np.cos(angle)))
-    
-    # Calculate the angles for the left and right boundaries of the cone
-    half_angle = np.radians(width / 2)  # Half of 135 degrees in radians
-    left_angle = angle - half_angle
-    right_angle = angle + half_angle
-    
-    # Calculate the left and right boundaries of the cone
-    left_end = (int(position[0] + length * np.sin(left_angle)), int(position[1] - length * np.cos(left_angle)))
-    right_end = (int(position[0] + length * np.sin(right_angle)), int(position[1] - length * np.cos(right_angle)))
-    
-    # Draw the cone
-    cv2.fillPoly(image, [np.array([position, left_end, right_end])], color)
 
 
 def draw_lines_to_monitor(image, arrow_tip, monitor_start, monitor_end, color):
@@ -154,15 +139,16 @@ while True:
         # For simplicity, consider the first detected marker for the mini-map
         rvec = rvecs[0]
         tvec = tvecs[0]
-        # After estimating the pose:
-        # rvec = rvecs[0]
 
         # Check and adjust the Z component of the rotation vector
         # print("Shape of rvec:", rvec.shape)
         # print("rvec:", rvec)
-        if rvec[0][1] < 0:
-            rvec[0][1] = -rvec[0][1]
+
+        # I THINK this is an offset for the monitor?? IDK I SHOULD REMOVE THIS...
+        # if rvec[0][1] < 0:
+        #     rvec[0][1] = -rvec[0][1]
         
+
         # Convert rotation vector to Euler angles for 2D rotation
         yaw = -cv2.Rodrigues(rvec)[0][2][0]
         # Inside the loop, after calculating the yaw:
@@ -184,12 +170,7 @@ while True:
         position = (position_x, position_y + Y_OFFSET)
 
                 
-        # Draw the vision cone
-        cone_length = 3000
-        cone_width = 90
-        cone_color = (0, 255, 255)  # Yellow
 
-        draw_vision_cone(mini_map, position, smoothed_yaw, cone_length, cone_width, cone_color)
 
         # Draw the lines from the arrow tip to the monitor sides
         line_color = (255, 0, 0)  # Blue
@@ -199,9 +180,8 @@ while True:
 
 
         draw_arrow(mini_map, position, smoothed_yaw)
-        print()
-
-        cube_render.update_perspective(-tvec[0][0]*10, tvec[0][1]*10, tvec[0][2])
+        # print(tvec[0][0])
+        cube_render.update_perspective(tvec[0][0], tvec[0][1], tvec[0][2])
         
         # Draw the rotation vectors on the frame
         for i in range(len(rvecs)):

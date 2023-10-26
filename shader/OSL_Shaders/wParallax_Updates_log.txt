@@ -1,0 +1,28 @@
+wParallax_Updates_log
+
+
+NEW --- UPDATE 2 - April / 2023 ---
+
+- *3Ds Max files setup is now split into individual EXR maps for Day and Night (2 OSL maps connected to 1 multimap)
+- Viewport preview feature added
+- wP_ON script is included in OSL folder, to quickly turn on diffuse maps for each OSL material (Installation: Run script-Toolbars-Category: wParallax)
+- wP_BOX added to each Pack (simple alternative to OSL)
+- Files saved in 2023 and 2019 version
+- People added to 3 EXR files in each Pack - (Thanks to Humano, https://humano3d.com/) 
+To add more people to EXR maps you can check out our People Pack (https://wparallax.gumroad.com/l/czBxl)
+
+PLEASE NOTE:
+
+*Due to random crashes with vray6 and corona9 in 3Ds Max 2023, there was a Beta Test to test new setup. 
+Final results concluded that the issue is probably related to many OSL maps connected to multimap, 
+the new setup with 2 OSL maps connected to 1 multimap seems to be much more stable.
+
+This setup will now be used in all new wParallax Packs.
+
+
+--- UPDATE 1 - June / 2022 --- 
+
+- 3Ds Max files setup with multimap (15 OSL connected to single multimap for vray and corona)
+- OSL Walls transparency settings added
+- OSL extra furniture and People layer expanded
+

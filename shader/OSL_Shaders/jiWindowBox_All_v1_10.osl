@@ -1,0 +1,335 @@
+// jiWindowBox - creates a fake "room" from a single plane
+// jiWindowBox.osl, by Julius Ihle
+// windowAspect wall distortion fix by David McDonnell
+// use local face coordinate system (Z as normal vector, U, V) by Zap Andersson from other OSL jiWindowBox
+// Modified 2020-11-05 by Adam Grudzien:
+// multipPlanarObjects (function getFaceTransformMatrix)
+// Modified 2021-04-09 by Pixamoon:
+// generate alpha output to control side walls visibility
+// fix textureFlip and placement of cutranins / midground (UV 0,0 : Left-Bottom corner / texture 0,0 : Left-Top corner)
+// create one version for all software and renderers (3dsMax+Vray/Corona/Arnold, Blender+Cycles, Cinema4D+Octane)
+// Modified 2021-04-14 by Marko Margeta:
+// Added additional "Layers" (x0.66-1.0,y0.0-0.333)(x0.66-1.0,y0.666-1.0)
+// Modified 2021-04-15 by Pixamoon:
+// optimized midGrounds calculation (replaced to array of structures)
+// EXR maps by wParallax (www.wparallax.com)
+
+
+
+struct midGround {
+	int enabled;
+	float depth;
+	float offsetX;
+	float offsetY;
+	color offsetUV;
+	color UV;
+	float mask;
+};
+
+matrix getFaceTransformMatrix()
+{
+	// getFaceTransformMatrix function by Zap Andersson
+
+	// Local face coordinates to world
+	vector wI = normalize(transform("world", -I));
+	vector wU = normalize(transform("world", dPdu));
+	vector wV = normalize(transform("world", dPdv));
+
+	//transform matrix
+	matrix newCoordSystem = matrix(wU[0],wV[0],wI[0], 0,
+								   wU[1],wV[1],wI[1], 0,
+								   wU[2],wV[2],wI[2], 0,
+								   0,    0,    0,     1);
+	return newCoordSystem;
+}
+
+
+shader jiWindowBox_px
+(
+	string filename  = ""			[[ string widget = "filename", string page  = "Map", string label = "File Name" ]],
+	int zUpAxis = 1				[[ string widget = "checkBox", string label = "Z Up Axis", string help   = "on: Z-up\n off: Y-up" ]],
+	int multiPlanarObj = 1			[[ string widget = "checkBox", string label = "Multi planar objects" ]],
+	int textureFlip = 1			[[ string widget = "checkBox", string label = "Texture Flip" ]],
+	int textureFlop = 0			[[ string widget = "checkBox", string label = "Texture Flop" ]],
+	float roomDepth = 1 			[[ float min = 0.1, float max = 100, string label = "Room Depth" ]],
+	float windowAspect = 1 			[[ string label = "Window Aspect", string help = "Window Aspect wall distortion" ]],
+	int enableLeft = 1			[[ string widget = "checkBox", string label = "Left wall",  string help = "Enable/disable left wall" ]],
+	int enableRight = 1       		[[ string widget = "checkBox", string label = "Right wall", string help = "Enable/disable right wall" ]],
+	int enableBack = 1        		[[ string widget = "checkBox", string label = "Back wall",  string help = "Enable/disable back wall" ]],
+	int enableCurtains = 1    		[[ string widget = "checkBox", string label = "Curtains",   string help = "Enable/disable curtains" ]],
+	int enableFurniture1 = 1   		[[ string widget = "checkBox", string label = "Furniture 1",  string help = "Enable/disable midground (furniture)" ]],
+	float Furniture1_DepthPos = 0.5 	[[ string label = "Furniture 1 Pos Y ", float min = 0.05, float max = 99 ]],
+	int enableFurniture2 = 0   		[[ string widget = "checkBox", string label = "Furniture 2",  string help = "Enable/disable Furniture" ]],
+	float Furniture2_DepthPos = 0.5 	[[ string label = "Furniture 2 Pos Y", float min = 0.05, float max = 99 ]],
+	int enablePeople = 0   		   	[[ string widget = "checkBox", string label = "People",  string help = "Enable/disable People" ]],
+	float People_DepthPos = 0.5 		[[ string label = "People Pos Y", float min = 0.05, float max = 99 ]],
+
+
+
+
+#ifdef __OCTANE_VERSION__
+
+		int output_type = 1 		 [[ string widget = "mapper", string label = "Output", string options = "RGB:1|Alpha:2|RGB_Alpha:3" ]],
+		output color out_Color = 0.0 [[ string label = "Output"]]
+
+#else
+
+		output color out_RGB   = 0.0 [[ string label = "RGB"]],
+		output float out_Alpha = 1.0 [[ string label = "Alpha"]]
+
+#endif
+
+)
+
+{
+	color finalRGB = color(0);
+	float finalAlpha = 1.0;
+	
+	float m_1_3 = 1.0 / 3.0;
+	float m_2_3 = 2.0 / 3.0;
+	
+	
+	//user controls remapping
+    float roomDepthMult      = clamp(roomDepth,0.1,100);
+    
+	
+	
+	// define tile location - depending on OSL engine
+	
+#ifndef __OCTANE_VERSION__
+	float tile_Y1 = 0;
+	float tile_Y3 = m_2_3;
+#else
+	float tile_Y1 = m_2_3;
+	float tile_Y3 = 0;
+#endif
+
+	color curtains_OffsetUV = color(0, tile_Y3, 0);
+
+
+	// create midGround elements array
+	midGround mg[3];
+	int mg_c = 0;
+	
+	if (enableFurniture1 > 0) {
+		mg[mg_c].enabled  = 1;
+		mg[mg_c].depth    = clamp(Furniture1_DepthPos, 0.05, roomDepthMult-0.01); 
+		mg[mg_c].offsetUV = color(0, tile_Y1, 0);
+		mg_c += 1;
+	}
+	
+	if (enableFurniture2 > 0) {
+		mg[mg_c].enabled  = 1;
+		mg[mg_c].depth    = clamp(Furniture2_DepthPos, 0.05, roomDepthMult-0.01); 
+		mg[mg_c].offsetUV = color(m_2_3, tile_Y1, 0);
+		mg_c += 1;
+	}
+	
+	if (enablePeople > 0) {
+		mg[mg_c].enabled  = 1;
+		mg[mg_c].depth    = clamp(People_DepthPos, 0.05, roomDepthMult-0.01); 
+		mg[mg_c].offsetUV = color(m_2_3, tile_Y3, 0);
+		mg_c += 1;
+	}
+	
+	// sort array by Depth (if more then 1 midground element enabled)
+	if (mg_c > 1) {
+		for (int j = mg_c - 1; j >= 0; --j) {
+			for (int i = 0; i < j; ++i) {
+				
+				if (mg[i].depth < mg[i+1].depth) {
+					midGround mg_tmp = mg[i];
+					mg[i] = mg[i+1];
+					mg[i+1] = mg_tmp;
+				}
+			}
+		}
+	}
+	
+	
+	
+	
+	
+
+    //global variables & remapping
+
+#ifdef CCL_STDCYCLESOSL_H  //Blender
+
+	//#include "stdosl.h" //testing only ttt
+
+    vector objI 	= transform("object", -I);
+    vector objPOrig	= transform("object", P) * 0.5 + 0.5; // P, I, N, Ng, u, v, dPdu, dPdv, Ps, time, dtime, dPdtime and Ci.
+    vector objP 	= transform("object", P) * 0.5 + 0.5;
+
+	//vector objPOrig; //testing only
+   	//getattribute("object:uv", objPOrig); //testing only ttt
+
+#else
+
+    vector objI;
+    if (multiPlanarObj > 0){
+    	objI = transform(getFaceTransformMatrix(), I);
+	} else {
+   	    objI = transform("object", I);
+   	}
+
+	//UV seems to be the better approach
+    vector objPOrig = vector(u, v, 0);	//for curtains
+    vector objP     = vector(u ,v, 0.5);
+   // vector objP 	= transform("object", P) * 0.5 + 0.5; //testing only ttt
+
+#endif
+
+
+    if (zUpAxis > 0){
+      objI = vector(objI[0], objI[1], objI[2]); //reorder to match UV for Z up axis
+    } else {
+      objI = vector(objI[0],-objI[2], objI[1]); //reorder to match UV for Y up axis
+    }
+
+    objI *= vector(1/windowAspect, 1, 1);
+
+
+
+    //bases for width/height/depth
+    vector sections = step(0, objI);
+    color baseDepth = (objP-sections)/(-objI * roomDepthMult);
+    color baseBack  = (objP-sections)/(-objI);
+    color baseWidth = baseDepth * roomDepthMult;
+
+
+    //depth and width ramps
+    color baseDepthX = (baseDepth[1]*objI+objP + 1);
+    color baseDepthY = (baseDepth[0]*objI+objP + 1);
+    color baseWidthX = (baseWidth[1]*objI+objP + 1);
+    color baseWidthY = (baseWidth[0]*objI+objP + 1);
+
+    float horizU = baseDepthY[2] - 0.5;
+    float vertU  = baseWidthX[0] - 1;
+    float horizV = baseWidthY[1] - 1;
+    float vertV  = baseDepthX[2] - 0.5;
+
+	//convert ramps to UV/ST... WIP - not very efficient
+	color rWallUV = 0;
+	color lWallUV = 0;
+	color bWallUV = 0;
+	
+	float FloorCeilMask = step(0,vertV) * step(0,1-max(vertU, 1-vertU));
+    color FloorCeilUV = color(vertU, vertV, 0) / 3;
+    color ceilUV  = (FloorCeilUV + color(m_1_3, m_2_3, 0)) * FloorCeilMask * sections[1];
+    color floorUV = (FloorCeilUV + color(m_1_3, 0, 0)) * FloorCeilMask * (1-sections[1]);
+    floorUV[1] = (m_1_3 - floorUV[1]) * FloorCeilMask * (1-sections[1]);
+	    	
+	if (enableLeft > 0 or enableRight > 0) {
+    	float sideWallsMask = step(0,horizU) * step(0,1-max(horizV, 1-horizV));
+    	color sideWallsUV = color(horizU, horizV, 0) / 3;
+    	if (enableRight  > 0) {
+    		rWallUV = (sideWallsUV + color(m_2_3, m_1_3, 0)) * sideWallsMask * sections[0];
+    	}
+    	if (enableLeft  > 0) {
+    		lWallUV = (sideWallsUV + color(0.0, m_1_3, 0)) * sideWallsMask * (1-sections[0]);
+    		lWallUV[0] = (m_1_3 - lWallUV[0]) * sideWallsMask * (1-sections[0]);
+    	}
+    }
+
+	if (enableBack  > 0) {
+    	bWallUV = ((baseBack[2]*objI + (objP/2)/(roomDepthMult)) * (roomDepthMult*2) / 3 + color(m_1_3, m_1_3, 0) ) * (1 - max(step(0,horizU), step(0,vertV)));
+	}
+	
+	color curtainsUV = objPOrig / 3;
+	
+	for (int i = 0; i < mg_c; ++i) {
+		mg[i].UV = ((baseBack[2]*objI + (objP)/(mg[i].depth*2)) * (mg[i].depth * 2) / 3);
+   		mg[i].mask = step( 0, mg[i].UV[1] * 3 * (1 - mg[i].UV[1]*3) ) * step( 0, mg[i].UV[0] * (1.0/3.0 - mg[i].UV[0]) );
+	}
+	
+
+    color finalUV = ceilUV + floorUV + bWallUV + lWallUV + rWallUV;
+
+
+    // generate alpha for back/left/right walls
+    if (finalUV[0] == 0 and finalUV[1] == 0) {finalAlpha = 0;}
+
+
+	//flipping ctrl
+    if (textureFlop > 0){
+    	finalUV[0] = 1-finalUV[0];
+    	curtainsUV[0]  = m_1_3 - curtainsUV[0];
+    }
+
+    if (textureFlip < 1){
+    	//UV 0,0 : Left-Bottom corner / texture 0,0 : Left-Top corner 
+    	//default has to be flipped
+        finalUV[1] = 1-finalUV[1];
+        curtainsUV[1]  = m_1_3 - curtainsUV[1];
+    }
+
+
+    if (finalUV[0] > 0 or finalUV[1] > 0) {finalRGB = texture(filename, finalUV[0], finalUV[1]);}
+ 
+ 
+ 
+ 	//midgrounds
+ 	for (int i = 0; i < mg_c; ++i) {
+ 		
+ 		color mgUV = mg[i].UV;
+ 		
+ 		if (textureFlop > 0){mgUV[0] = m_1_3 - mgUV[0];}
+ 		if (textureFlip < 1){mgUV[1] = m_1_3 - mgUV[1];}
+ 		
+ 		if (mgUV[0] > 0.01 and mgUV[0] < 0.331 and mgUV[1] > 0.01 and mgUV[1] < 0.331) {
+ 	
+			mgUV += mg[i].offsetUV;
+		
+        	float midgroundAlpha;
+        	color midgroundRGB = texture(filename, mgUV[0], mgUV[1], "alpha", midgroundAlpha);
+        	finalRGB = mix(finalRGB, midgroundRGB, midgroundAlpha * mg[i].mask);
+
+			finalAlpha = mix(finalAlpha, 1, midgroundAlpha * mg[i].mask);
+		}
+    }
+ 	
+ 	
+    //curtains
+    if (enableCurtains > 0){
+    	
+		curtainsUV += curtains_OffsetUV;
+
+        float curtainsA;
+        color curtainsRGB = texture(filename, curtainsUV[0], curtainsUV[1], "alpha", curtainsA);
+        finalRGB = mix(finalRGB,curtainsRGB,curtainsA);
+
+		finalAlpha = mix(finalAlpha, 1, curtainsA);
+    }
+
+
+
+	//outputs
+
+#ifdef __OCTANE_VERSION__
+
+	if (output_type == 1)
+	{
+		out_Color = finalRGB;
+	}
+	else if (output_type == 2)
+	{
+		out_Color = finalAlpha;
+	}
+	else
+	{
+		//if (finalAlpha > 0) {finalRGB[0] = -finalRGB[0];} // 1-bit mask
+
+		finalRGB[0] = trunc(finalRGB[0] * 1000)/1000.0 + finalAlpha / 10000;
+
+		out_Color = color(finalRGB[0], finalRGB[1], finalRGB[2]);
+	}
+
+#else
+
+	out_RGB = finalRGB;
+    out_Alpha = finalAlpha;
+
+#endif
+
+}

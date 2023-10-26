@@ -26,6 +26,10 @@ def resize_to_aspect_ratio(image, target_ratio=16/9, target_width=1280):
 
     return image
 
+def warp_to_aspect_ratio(image, target_ratio=16/9, target_width=1280):
+    """Warp the image to maintain the target aspect ratio."""
+    new_height = int(target_width / target_ratio)
+    return cv2.resize(image, (target_width, new_height))
 
 def order_points(pts):
     x_sorted = pts[np.argsort(pts[:, 0]), :]
@@ -58,11 +62,15 @@ def is_black_pixel(image, point):
 
 
 # Load the video
-cap = cv2.VideoCapture('Godot_test\input_video.mp4')
+cap = cv2.VideoCapture('Godot_test\input_video2.mp4')
 fps = int(cap.get(cv2.CAP_PROP_FPS))
 
 # Initialize the VideoWriter with a placeholder size
 out = None
+
+# Get screen resolution
+screen_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+screen_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
 # Process each frame
 frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -85,23 +93,34 @@ for _ in tqdm.tqdm(range(frame_count), desc="Processing video"):
             if all_corners_black:
                 max_area = cv2.contourArea(approx)
                 best_approx = approx
-
     if best_approx is not None:
         warped = transform_perspective(frame, best_approx.reshape(4, 2))
-        warped = resize_to_aspect_ratio(warped)
-        cv2.imshow('Cropped Frame', warped)
+        warped = warp_to_aspect_ratio(warped)
+
+        # Resize the videos to fit within half the screen height
+        target_height = int(screen_height / 2)
+        frame_resized = cv2.resize(frame, (int(frame.shape[1] * target_height / frame.shape[0]), target_height))
+        warped_resized = cv2.resize(warped, (int(warped.shape[1] * target_height / warped.shape[0]), target_height))
+
+        # Ensure both frames have the same width
+        min_width = min(frame_resized.shape[1], warped_resized.shape[1])
+        frame_resized = frame_resized[:, :min_width]
+        warped_resized = warped_resized[:, :min_width]
+
+        # Concatenate the cropped and original frames vertically with cropped on top
+        combined = np.vstack((warped_resized, frame_resized))
         
-        # Initialize the VideoWriter with the correct size once we have the first cropped frame
+        cv2.imshow('Combined Frame', combined)
+        
+        # Initialize the VideoWriter with the correct size once we have the first combined frame
         if out is None:
-            h, w, _ = warped.shape
+            h, w, _ = combined.shape
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter('Godot_test\output_video.mp4', fourcc, fps, (w, h))
+            out = cv2.VideoWriter('Godot_test\output_video2.mp4', fourcc, fps, (w, h))
         
-        out.write(warped)
+        out.write(combined)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
-
 
 # Release everything
 cap.release()

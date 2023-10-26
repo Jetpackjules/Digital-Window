@@ -1,0 +1,31 @@
+from PIL import Image
+import os
+
+def split_cubemap(input_image_path, output_folder):
+    # Open the image
+    img = Image.open(input_image_path)
+    
+    # Assuming the image is a horizontal cross layout
+    width, height = img.size
+    face_width = width // 4
+    face_height = height // 3
+
+    # Define the positions of each face in the horizontal cross layout
+    faces = {
+        "posx": (2 * face_width, face_height),
+        "negx": (0, face_height),
+        "posy": (face_width, 0),
+        "negy": (face_width, 2 * face_height),
+        "posz": (face_width, face_height),
+        "negz": (3 * face_width, face_height)
+    }
+
+    # Crop and save each face
+    for face, position in faces.items():
+        face_img = img.crop((position[0], position[1], position[0] + face_width, position[1] + face_height))
+        face_img.save(os.path.join(output_folder, f"{face}.png"))
+
+if __name__ == "__main__":
+    input_image_path = "shader_test\\converted_cubemap\\test.jpg"
+    output_folder = "Cubemap"
+    split_cubemap(input_image_path, output_folder)

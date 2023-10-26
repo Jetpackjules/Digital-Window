@@ -1,0 +1,938 @@
+OpenShadingLanguage 1.00
+# Compiled by oslc 1.13.0.1dev
+# options: -o C:\Users\Jetpackjules\AppData\Local\Temp\tmpz1174c4f.oso -IC:\Users\Jetpackjules\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\LocalCache\local-packages\Python310\site-packages\bpy\3.6\scripts\addons\cycles\shader
+shader jiWindowBox_px
+param	string	filename	""		%meta{string,widget,"filename"} %meta{string,page,"Map"} %meta{string,label,"File Name"}  %read{321,376} %write{2147483647,-1}
+param	int	zUpAxis	1		%meta{string,widget,"checkBox"} %meta{string,label,"Z Up Axis"} %meta{string,help,"on: Z-up\n off: Y-up"}  %read{111,111} %write{2147483647,-1}
+param	int	multiPlanarObj	1		%meta{string,widget,"checkBox"} %meta{string,label,"Multi planar objects"}  %read{2147483647,-1} %write{2147483647,-1}
+param	int	textureFlip	1		%meta{string,widget,"checkBox"} %meta{string,label,"Texture Flip"}  %read{302,333} %write{2147483647,-1}
+param	int	textureFlop	0		%meta{string,widget,"checkBox"} %meta{string,label,"Texture Flop"}  %read{294,328} %write{2147483647,-1}
+param	float	roomDepth	1		%meta{float,min,0.100000001} %meta{float,max,100} %meta{string,label,"Room Depth"}  %read{5,5} %write{2147483647,-1} %derivs
+param	float	windowAspect	1		%meta{string,label,"Window Aspect"} %meta{string,help,"Window Aspect wall distortion"}  %read{122,122} %write{2147483647,-1} %derivs
+param	int	enableLeft	1		%meta{string,widget,"checkBox"} %meta{string,label,"Left wall"} %meta{string,help,"Enable/disable left wall"}  %read{188,210} %write{2147483647,-1}
+param	int	enableRight	1		%meta{string,widget,"checkBox"} %meta{string,label,"Right wall"} %meta{string,help,"Enable/disable right wall"}  %read{191,203} %write{2147483647,-1}
+param	int	enableBack	1		%meta{string,widget,"checkBox"} %meta{string,label,"Back wall"} %meta{string,help,"Enable/disable back wall"}  %read{225,225} %write{2147483647,-1}
+param	int	enableCurtains	1		%meta{string,widget,"checkBox"} %meta{string,label,"Curtains"} %meta{string,help,"Enable/disable curtains"}  %read{371,371} %write{2147483647,-1}
+param	int	enableFurniture1	1		%meta{string,widget,"checkBox"} %meta{string,label,"Furniture 1"} %meta{string,help,"Enable/disable midground (furniture)"}  %read{11,11} %write{2147483647,-1}
+param	float	Furniture1_DepthPos	0.5		%meta{string,label,"Furniture 1 Pos Y "} %meta{float,min,0.0500000007} %meta{float,max,99}  %read{18,18} %write{2147483647,-1} %derivs
+param	int	enableFurniture2	0		%meta{string,widget,"checkBox"} %meta{string,label,"Furniture 2"} %meta{string,help,"Enable/disable Furniture"}  %read{25,25} %write{2147483647,-1}
+param	float	Furniture2_DepthPos	0.5		%meta{string,label,"Furniture 2 Pos Y"} %meta{float,min,0.0500000007} %meta{float,max,99}  %read{32,32} %write{2147483647,-1} %derivs
+param	int	enablePeople	0		%meta{string,widget,"checkBox"} %meta{string,label,"People"} %meta{string,help,"Enable/disable People"}  %read{39,39} %write{2147483647,-1}
+param	float	People_DepthPos	0.5		%meta{string,label,"People Pos Y"} %meta{float,min,0.0500000007} %meta{float,max,99}  %read{46,46} %write{2147483647,-1} %derivs
+oparam	color	out_RGB	0 0 0		%meta{string,label,"RGB"}  %read{2147483647,-1} %write{379,379}
+oparam	float	out_Alpha	1		%meta{string,label,"Alpha"}  %read{2147483647,-1} %write{380,380}
+global	point	P	%read{104,108} %write{2147483647,-1} %derivs
+global	vector	I	%read{100,100} %write{2147483647,-1} %derivs
+local	color	finalRGB	%read{324,379} %write{0,377}
+local	float	finalAlpha	%read{324,380} %write{1,378}
+local	float	m_1_3	%read{170,370} %write{2,2} %derivs
+local	float	m_2_3	%read{8,205} %write{3,3} %derivs
+local	float	roomDepthMult	%read{16,232} %write{6,6} %derivs
+local	float	tile_Y1	%read{22,36} %write{7,7} %derivs
+local	float	tile_Y3	%read{9,50} %write{8,8} %derivs
+local	color	curtains_OffsetUV	%read{373,373} %write{9,9} %derivs
+local	int[3]	mg.enabled	%read{13,99} %write{14,99} %mystruct{mg} %mystructfield{0}
+local	float[3]	mg.depth	%read{15,279} %write{20,99} %mystruct{mg} %mystructfield{1} %derivs
+local	float[3]	mg.offsetX	%read{70,78} %write{57,99} %mystruct{mg} %mystructfield{2}
+local	float[3]	mg.offsetY	%read{71,79} %write{57,99} %mystruct{mg} %mystructfield{3}
+local	color[3]	mg.offsetUV	%read{21,370} %write{23,99} %mystruct{mg} %mystructfield{4} %derivs
+local	color[3]	mg.UV	%read{73,370} %write{57,279} %mystruct{mg} %mystructfield{5} %derivs
+local	float[3]	mg.mask	%read{74,370} %write{57,279} %mystruct{mg} %mystructfield{6}
+local	int	mg_c	%read{13,370} %write{10,52} %derivs
+local	int	___379_j	%read{57,99} %write{56,99}
+local	int	___381_i	%read{57,99} %write{57,99} %derivs
+local	int	___383_mg_tmp.enabled	%read{57,99} %write{57,99} %mystruct{___383_mg_tmp} %mystructfield{0}
+local	float	___383_mg_tmp.depth	%read{57,99} %write{57,99} %mystruct{___383_mg_tmp} %mystructfield{1} %derivs
+local	float	___383_mg_tmp.offsetX	%read{57,99} %write{57,99} %mystruct{___383_mg_tmp} %mystructfield{2}
+local	float	___383_mg_tmp.offsetY	%read{57,99} %write{57,99} %mystruct{___383_mg_tmp} %mystructfield{3}
+local	color	___383_mg_tmp.offsetUV	%read{57,99} %write{57,99} %mystruct{___383_mg_tmp} %mystructfield{4} %derivs
+local	color	___383_mg_tmp.UV	%read{57,99} %write{57,99} %mystruct{___383_mg_tmp} %mystructfield{5} %derivs
+local	float	___383_mg_tmp.mask	%read{57,99} %write{57,99} %mystruct{___383_mg_tmp} %mystructfield{6}
+local	vector	objI	%read{113,279} %write{102,124} %derivs
+local	vector	objPOrig	%read{242,242} %write{106,106} %derivs
+local	vector	objP	%read{127,279} %write{110,110} %derivs
+local	vector	sections	%read{127,221} %write{126,126} %derivs
+local	color	baseDepth	%read{134,139} %write{130,130} %derivs
+local	color	baseBack	%read{227,279} %write{133,133} %derivs
+local	color	baseWidth	%read{143,147} %write{134,134} %derivs
+local	color	baseDepthX	%read{157,157} %write{138,138} %derivs
+local	color	baseDepthY	%read{151,151} %write{142,142} %derivs
+local	color	baseWidthX	%read{153,153} %write{146,146} %derivs
+local	color	baseWidthY	%read{155,155} %write{150,150} %derivs
+local	float	horizU	%read{195,237} %write{152,152} %derivs
+local	float	vertU	%read{163,168} %write{154,154} %derivs
+local	float	horizV	%read{196,201} %write{156,156} %derivs
+local	float	vertV	%read{162,238} %write{158,158} %derivs
+local	color	rWallUV	%read{283,283} %write{159,209} %derivs
+local	color	lWallUV	%read{218,282} %write{160,224} %derivs
+local	color	bWallUV	%read{281,281} %write{161,241} %derivs
+local	float	FloorCeilMask	%read{172,183} %write{167,167} %derivs
+local	color	FloorCeilUV	%read{171,176} %write{169,169} %derivs
+local	color	ceilUV	%read{280,280} %write{174,174} %derivs
+local	color	floorUV	%read{181,280} %write{180,187} %derivs
+local	float	___386_sideWallsMask	%read{207,220} %write{200,200} %derivs
+local	color	___386_sideWallsUV	%read{206,213} %write{202,202} %derivs
+local	color	curtainsUV	%read{299,375} %write{242,373} %derivs
+local	int	___390_i	%read{245,279} %write{244,279} %derivs
+local	color	finalUV	%read{284,320} %write{283,306} %derivs
+local	int	___396_i	%read{324,370} %write{323,370} %derivs
+local	color	___397_mgUV	%read{324,370} %write{324,370} %derivs
+local	float	___400_midgroundAlpha	%read{324,370} %write{324,370}
+local	color	___400_midgroundRGB	%read{324,370} %write{324,370}
+local	float	___401_curtainsA	%read{377,378} %write{376,376}
+local	color	___401_curtainsRGB	%read{377,377} %write{376,376}
+const	color	$const1	0 0 0		%read{0,0} %write{2147483647,-1}
+const	float	$const2	1		%read{1,378} %write{2147483647,-1}
+const	float	$const3	3		%read{2,271} %write{2147483647,-1}
+const	float	$const4	2		%read{3,255} %write{2147483647,-1}
+const	float	$const5	0.1		%read{6,6} %write{2147483647,-1}
+const	float	$const7	100		%read{5,5} %write{2147483647,-1}
+const	string	$const8	"clamp"		%read{4,45} %write{2147483647,-1}
+temp	float	$tmp1	%read{6,6} %write{5,5} %derivs
+const	int	$const9	0		%read{7,374} %write{2147483647,-1}
+const	float	$const10	0		%read{9,276} %write{2147483647,-1}
+temp	int	$tmp2	%read{12,12} %write{11,11}
+temp	int	$tmp3	%read{2147483647,-1} %write{13,13}
+const	int	$const11	1		%read{14,375} %write{2147483647,-1}
+temp	float	$tmp4	%read{20,20} %write{15,19} %derivs
+const	float	$const12	0.05		%read{19,47} %write{2147483647,-1}
+const	float	$const13	0.01		%read{16,349} %write{2147483647,-1}
+temp	float	$tmp5	%read{18,18} %write{16,16} %derivs
+temp	float	$tmp6	%read{19,19} %write{18,18} %derivs
+temp	color	$tmp7	%read{23,23} %write{21,22} %derivs
+temp	int	$tmp8	%read{26,26} %write{25,25}
+temp	int	$tmp9	%read{2147483647,-1} %write{27,27}
+temp	float	$tmp10	%read{34,34} %write{29,33} %derivs
+temp	float	$tmp11	%read{32,32} %write{30,30} %derivs
+temp	float	$tmp12	%read{33,33} %write{32,32} %derivs
+temp	color	$tmp13	%read{37,37} %write{35,36} %derivs
+temp	int	$tmp14	%read{40,40} %write{39,39}
+temp	int	$tmp15	%read{2147483647,-1} %write{41,41}
+temp	float	$tmp16	%read{48,48} %write{43,47} %derivs
+temp	float	$tmp17	%read{46,46} %write{44,44} %derivs
+temp	float	$tmp18	%read{47,47} %write{46,46} %derivs
+temp	color	$tmp19	%read{51,51} %write{49,50} %derivs
+temp	int	$tmp20	%read{54,54} %write{53,53}
+temp	int	$tmp21	%read{57,99} %write{57,99}
+temp	int	$tmp22	%read{55,99} %write{56,99}
+temp	int	$tmp23	%read{57,99} %write{57,99}
+temp	int	$tmp24	%read{57,99} %write{57,99}
+temp	float	$tmp25	%read{57,99} %write{57,99}
+temp	int	$tmp26	%read{57,99} %write{57,99}
+temp	float	$tmp27	%read{57,99} %write{57,99}
+temp	int	$tmp28	%read{57,99} %write{57,99}
+temp	int	$tmp29	%read{57,99} %write{57,99} %derivs
+temp	int	$tmp30.enabled	%read{57,99} %write{57,99}
+temp	float	$tmp30.depth	%read{57,99} %write{57,99} %derivs
+temp	float	$tmp30.offsetX	%read{57,99} %write{57,99}
+temp	float	$tmp30.offsetY	%read{57,99} %write{57,99}
+temp	color	$tmp30.offsetUV	%read{57,99} %write{57,99} %derivs
+temp	color	$tmp30.UV	%read{57,99} %write{57,99} %derivs
+temp	float	$tmp30.mask	%read{57,99} %write{57,99}
+temp	int	$tmp31	%read{57,99} %write{57,99} %derivs
+const	string	$const14	"object"		%read{102,108} %write{2147483647,-1}
+temp	vector	$tmp32	%read{102,102} %write{100,100} %derivs
+const	string	$const15	"transform"		%read{101,107} %write{2147483647,-1}
+const	string	$const16	"common"		%read{102,108} %write{2147483647,-1}
+temp	point	$tmp33	%read{105,105} %write{104,104} %derivs
+const	float	$const17	0.5		%read{105,158} %write{2147483647,-1}
+temp	point	$tmp34	%read{106,106} %write{105,105} %derivs
+temp	point	$tmp35	%read{109,109} %write{108,108} %derivs
+temp	point	$tmp36	%read{110,110} %write{109,109} %derivs
+temp	int	$tmp37	%read{112,112} %write{111,111}
+temp	float	$tmp38	%read{116,116} %write{113,113} %derivs
+temp	float	$tmp39	%read{116,116} %write{114,114} %derivs
+const	int	$const18	2		%read{115,248} %write{2147483647,-1}
+temp	float	$tmp40	%read{116,116} %write{115,115} %derivs
+temp	float	$tmp41	%read{121,121} %write{117,117} %derivs
+temp	float	$tmp42	%read{119,119} %write{118,118} %derivs
+temp	float	$tmp43	%read{121,121} %write{119,119} %derivs
+temp	float	$tmp44	%read{121,121} %write{120,120} %derivs
+temp	vector	$tmp45	%read{124,124} %write{123,123} %derivs
+temp	float	$tmp46	%read{123,123} %write{122,122} %derivs
+temp	vector	$tmp47	%read{126,126} %write{125,125} %derivs
+temp	vector	$tmp48	%read{130,130} %write{127,127} %derivs
+temp	vector	$tmp49	%read{129,129} %write{128,128} %derivs
+temp	vector	$tmp50	%read{130,130} %write{129,129} %derivs
+temp	vector	$tmp51	%read{133,133} %write{131,131} %derivs
+temp	vector	$tmp52	%read{133,133} %write{132,132} %derivs
+temp	float	$tmp53	%read{136,136} %write{135,135} %derivs
+temp	vector	$tmp54	%read{137,137} %write{136,136} %derivs
+temp	vector	$tmp55	%read{138,138} %write{137,137} %derivs
+temp	float	$tmp56	%read{140,140} %write{139,139} %derivs
+temp	vector	$tmp57	%read{141,141} %write{140,140} %derivs
+temp	vector	$tmp58	%read{142,142} %write{141,141} %derivs
+temp	float	$tmp59	%read{144,144} %write{143,143} %derivs
+temp	vector	$tmp60	%read{145,145} %write{144,144} %derivs
+temp	vector	$tmp61	%read{146,146} %write{145,145} %derivs
+temp	float	$tmp62	%read{148,148} %write{147,147} %derivs
+temp	vector	$tmp63	%read{149,149} %write{148,148} %derivs
+temp	vector	$tmp64	%read{150,150} %write{149,149} %derivs
+temp	float	$tmp65	%read{152,152} %write{151,151} %derivs
+temp	float	$tmp66	%read{154,154} %write{153,153} %derivs
+temp	float	$tmp67	%read{156,156} %write{155,155} %derivs
+temp	float	$tmp68	%read{158,158} %write{157,157} %derivs
+temp	float	$tmp69	%read{167,167} %write{162,162} %derivs
+temp	float	$tmp70	%read{167,167} %write{166,166} %derivs
+temp	float	$tmp71	%read{165,165} %write{164,164} %derivs
+temp	float	$tmp72	%read{164,164} %write{163,163} %derivs
+temp	float	$tmp73	%read{166,166} %write{165,165} %derivs
+temp	color	$tmp74	%read{169,169} %write{168,168} %derivs
+temp	color	$tmp75	%read{171,171} %write{170,170} %derivs
+temp	color	$tmp76	%read{172,172} %write{171,171} %derivs
+temp	color	$tmp77	%read{174,174} %write{172,172} %derivs
+temp	float	$tmp78	%read{174,174} %write{173,173} %derivs
+temp	color	$tmp79	%read{176,176} %write{175,175} %derivs
+temp	color	$tmp80	%read{177,177} %write{176,176} %derivs
+temp	color	$tmp81	%read{180,180} %write{177,177} %derivs
+temp	float	$tmp82	%read{179,179} %write{178,178} %derivs
+temp	float	$tmp83	%read{180,180} %write{179,179} %derivs
+temp	float	$tmp84	%read{182,182} %write{181,181} %derivs
+temp	float	$tmp85	%read{183,183} %write{182,182} %derivs
+temp	float	$tmp86	%read{186,186} %write{183,183} %derivs
+temp	float	$tmp87	%read{185,185} %write{184,184} %derivs
+temp	float	$tmp88	%read{186,186} %write{185,185} %derivs
+temp	float	$tmp89	%read{187,187} %write{186,186} %derivs
+temp	int	$tmp90	%read{189,189} %write{188,188}
+temp	int	$tmp91	%read{190,194} %write{189,193}
+temp	int	$tmp92	%read{192,192} %write{191,191}
+temp	int	$tmp93	%read{193,193} %write{192,192}
+temp	float	$tmp94	%read{200,200} %write{195,195} %derivs
+temp	float	$tmp95	%read{200,200} %write{199,199} %derivs
+temp	float	$tmp96	%read{198,198} %write{197,197} %derivs
+temp	float	$tmp97	%read{197,197} %write{196,196} %derivs
+temp	float	$tmp98	%read{199,199} %write{198,198} %derivs
+temp	color	$tmp99	%read{202,202} %write{201,201} %derivs
+temp	int	$tmp100	%read{204,204} %write{203,203}
+temp	color	$tmp101	%read{206,206} %write{205,205} %derivs
+temp	color	$tmp102	%read{207,207} %write{206,206} %derivs
+temp	color	$tmp103	%read{209,209} %write{207,207} %derivs
+temp	float	$tmp104	%read{209,209} %write{208,208} %derivs
+temp	int	$tmp105	%read{211,211} %write{210,210}
+temp	color	$tmp106	%read{213,213} %write{212,212} %derivs
+temp	color	$tmp107	%read{214,214} %write{213,213} %derivs
+temp	color	$tmp108	%read{217,217} %write{214,214} %derivs
+temp	float	$tmp109	%read{216,216} %write{215,215} %derivs
+temp	float	$tmp110	%read{217,217} %write{216,216} %derivs
+temp	float	$tmp111	%read{219,219} %write{218,218} %derivs
+temp	float	$tmp112	%read{220,220} %write{219,219} %derivs
+temp	float	$tmp113	%read{223,223} %write{220,220} %derivs
+temp	float	$tmp114	%read{222,222} %write{221,221} %derivs
+temp	float	$tmp115	%read{223,223} %write{222,222} %derivs
+temp	float	$tmp116	%read{224,224} %write{223,223} %derivs
+temp	int	$tmp117	%read{226,226} %write{225,225}
+temp	float	$tmp118	%read{228,228} %write{227,227} %derivs
+temp	vector	$tmp119	%read{231,231} %write{228,228} %derivs
+temp	vector	$tmp120	%read{230,230} %write{229,229} %derivs
+temp	vector	$tmp121	%read{231,231} %write{230,230} %derivs
+temp	vector	$tmp122	%read{233,233} %write{231,231} %derivs
+temp	float	$tmp123	%read{233,233} %write{232,232} %derivs
+temp	vector	$tmp124	%read{234,234} %write{233,233} %derivs
+temp	vector	$tmp125	%read{236,236} %write{234,234} %derivs
+temp	color	$tmp126	%read{236,236} %write{235,235} %derivs
+temp	vector	$tmp127	%read{241,241} %write{236,236} %derivs
+temp	float	$tmp128	%read{240,240} %write{239,239} %derivs
+temp	float	$tmp129	%read{239,239} %write{237,237} %derivs
+temp	float	$tmp130	%read{239,239} %write{238,238} %derivs
+temp	float	$tmp131	%read{241,241} %write{240,240} %derivs
+temp	int	$tmp132	%read{245,279} %write{245,279}
+temp	int	$tmp133	%read{243,279} %write{244,279}
+temp	color	$tmp134	%read{245,279} %write{245,279} %derivs
+temp	float	$tmp135	%read{245,279} %write{245,279} %derivs
+temp	vector	$tmp136	%read{245,279} %write{245,279} %derivs
+temp	float	$tmp137	%read{245,279} %write{245,279} %derivs
+temp	float	$tmp138	%read{245,279} %write{245,279} %derivs
+temp	vector	$tmp139	%read{245,279} %write{245,279} %derivs
+temp	vector	$tmp140	%read{245,279} %write{245,279} %derivs
+temp	float	$tmp141	%read{245,279} %write{245,279} %derivs
+temp	float	$tmp142	%read{245,279} %write{245,279} %derivs
+temp	vector	$tmp143	%read{245,279} %write{245,279} %derivs
+temp	float	$tmp144	%read{245,279} %write{245,279}
+temp	float	$tmp145	%read{245,279} %write{245,279}
+temp	color	$tmp146	%read{245,279} %write{245,279}
+temp	float	$tmp147	%read{245,279} %write{245,279}
+temp	float	$tmp148	%read{245,279} %write{245,279}
+temp	color	$tmp149	%read{245,279} %write{245,279}
+temp	float	$tmp150	%read{245,279} %write{245,279}
+temp	float	$tmp151	%read{245,279} %write{245,279}
+temp	float	$tmp152	%read{245,279} %write{245,279}
+temp	float	$tmp153	%read{245,279} %write{245,279}
+temp	float	$tmp154	%read{245,279} %write{245,279}
+temp	color	$tmp155	%read{245,279} %write{245,279}
+temp	float	$tmp156	%read{245,279} %write{245,279}
+temp	float	$tmp157	%read{245,279} %write{245,279}
+temp	color	$tmp158	%read{245,279} %write{245,279}
+temp	float	$tmp159	%read{245,279} %write{245,279}
+temp	float	$tmp160	%read{245,279} %write{245,279}
+temp	float	$tmp161	%read{245,279} %write{245,279}
+temp	color	$tmp162	%read{281,281} %write{280,280} %derivs
+temp	color	$tmp163	%read{282,282} %write{281,281} %derivs
+temp	color	$tmp164	%read{283,283} %write{282,282} %derivs
+temp	float	$tmp165	%read{285,285} %write{284,284}
+temp	int	$tmp166	%read{286,286} %write{285,285}
+temp	int	$tmp167	%read{287,292} %write{286,291}
+temp	float	$tmp168	%read{289,289} %write{288,288}
+temp	int	$tmp169	%read{290,290} %write{289,289}
+temp	int	$tmp170	%read{291,291} %write{290,290}
+temp	int	$tmp171	%read{295,295} %write{294,294}
+temp	float	$tmp172	%read{297,297} %write{296,296} %derivs
+temp	float	$tmp173	%read{298,298} %write{297,297} %derivs
+temp	float	$tmp174	%read{300,300} %write{299,299} %derivs
+temp	float	$tmp175	%read{301,301} %write{300,300} %derivs
+temp	int	$tmp176	%read{303,303} %write{302,302}
+temp	float	$tmp177	%read{305,305} %write{304,304} %derivs
+temp	float	$tmp178	%read{306,306} %write{305,305} %derivs
+temp	float	$tmp179	%read{308,308} %write{307,307} %derivs
+temp	float	$tmp180	%read{309,309} %write{308,308} %derivs
+temp	float	$tmp181	%read{311,311} %write{310,310}
+temp	int	$tmp182	%read{312,312} %write{311,311}
+temp	int	$tmp183	%read{313,318} %write{312,317}
+temp	float	$tmp184	%read{315,315} %write{314,314}
+temp	int	$tmp185	%read{316,316} %write{315,315}
+temp	int	$tmp186	%read{317,317} %write{316,316}
+temp	float	$tmp187	%read{321,321} %write{319,319} %derivs
+temp	float	$tmp188	%read{321,321} %write{320,320} %derivs
+temp	int	$tmp189	%read{324,370} %write{324,370}
+temp	int	$tmp190	%read{322,370} %write{323,370}
+temp	color	$tmp191	%read{324,370} %write{324,370} %derivs
+temp	int	$tmp192	%read{324,370} %write{324,370}
+temp	float	$tmp193	%read{324,370} %write{324,370} %derivs
+temp	float	$tmp194	%read{324,370} %write{324,370} %derivs
+temp	int	$tmp195	%read{324,370} %write{324,370}
+temp	float	$tmp196	%read{324,370} %write{324,370} %derivs
+temp	float	$tmp197	%read{324,370} %write{324,370} %derivs
+temp	float	$tmp198	%read{324,370} %write{324,370}
+temp	int	$tmp199	%read{324,370} %write{324,370}
+temp	int	$tmp200	%read{324,370} %write{324,370}
+temp	float	$tmp201	%read{324,370} %write{324,370}
+const	float	$const20	0.331		%read{343,355} %write{2147483647,-1}
+temp	int	$tmp202	%read{324,370} %write{324,370}
+temp	int	$tmp203	%read{324,370} %write{324,370}
+temp	int	$tmp204	%read{324,370} %write{324,370}
+temp	float	$tmp205	%read{324,370} %write{324,370}
+temp	int	$tmp206	%read{324,370} %write{324,370}
+temp	int	$tmp207	%read{324,370} %write{324,370}
+temp	int	$tmp208	%read{324,370} %write{324,370}
+temp	float	$tmp209	%read{324,370} %write{324,370}
+temp	int	$tmp210	%read{324,370} %write{324,370}
+temp	int	$tmp211	%read{324,370} %write{324,370}
+temp	color	$tmp212	%read{324,370} %write{324,370} %derivs
+temp	float	$tmp213	%read{324,370} %write{324,370} %derivs
+temp	float	$tmp214	%read{324,370} %write{324,370} %derivs
+const	string	$const21	"alpha"		%read{363,376} %write{2147483647,-1}
+temp	float	$tmp215	%read{324,370} %write{324,370}
+temp	float	$tmp216	%read{324,370} %write{324,370}
+temp	float	$tmp217	%read{324,370} %write{324,370}
+temp	float	$tmp218	%read{324,370} %write{324,370}
+temp	int	$tmp219	%read{372,372} %write{371,371}
+temp	float	$tmp220	%read{376,376} %write{374,374} %derivs
+temp	float	$tmp221	%read{376,376} %write{375,375} %derivs
+code ___main___
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:86
+# 	float finalAlpha = 1.0;
+	assign		finalRGB $const1 	%filename{"shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl"} %line{86} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:87
+# 	
+	assign		finalAlpha $const2 	%line{87} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:89
+# 	float m_2_3 = 2.0 / 3.0;
+	div		m_1_3 $const2 $const3 	%line{89} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:90
+# 	
+	div		m_2_3 $const4 $const3 	%line{90} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:94
+#     
+	functioncall	$const8 7 	%line{94} %argrw{"r"}
+# C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp1 roomDepth $const7 	%filename{"C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h"} %line{141} %argrw{"wrr"}
+	max		roomDepthMult $tmp1 $const5 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:101
+# 	float tile_Y3 = m_2_3;
+	assign		tile_Y1 $const9 	%filename{"shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl"} %line{101} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:102
+# #else
+	assign		tile_Y3 m_2_3 	%line{102} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:108
+# 
+	color		curtains_OffsetUV $const10 tile_Y3 $const10 	%line{108} %argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:113
+# 	
+	assign		mg_c $const9 	%line{113} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:115
+# 		mg[mg_c].enabled  = 1;
+	gt		$tmp2 enableFurniture1 $const9 	%line{115} %argrw{"wrr"}
+	if		$tmp2 25 25 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:116
+# 		mg[mg_c].depth    = clamp(Furniture1_DepthPos, 0.05, roomDepthMult-0.01); 
+	aref		$tmp3 mg.enabled mg_c 	%line{116} %argrw{"wrr"}
+	aassign		mg.enabled mg_c $const11 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:117
+# 		mg[mg_c].offsetUV = color(0, tile_Y1, 0);
+	aref		$tmp4 mg.depth mg_c 	%line{117} %argrw{"wrr"}
+	sub		$tmp5 roomDepthMult $const13 	%argrw{"wrr"}
+	functioncall	$const8 20 	%argrw{"r"}
+# C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp6 Furniture1_DepthPos $tmp5 	%filename{"C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h"} %line{141} %argrw{"wrr"}
+	max		$tmp4 $tmp6 $const12 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:117
+# 		mg[mg_c].offsetUV = color(0, tile_Y1, 0);
+	aassign		mg.depth mg_c $tmp4 	%filename{"shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl"} %line{117} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:118
+# 		mg_c += 1;
+	aref		$tmp7 mg.offsetUV mg_c 	%line{118} %argrw{"wrr"}
+	color		$tmp7 $const10 tile_Y1 $const10 	%argrw{"wrrr"}
+	aassign		mg.offsetUV mg_c $tmp7 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:119
+# 	}
+	add		mg_c mg_c $const11 	%line{119} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:122
+# 		mg[mg_c].enabled  = 1;
+	gt		$tmp8 enableFurniture2 $const9 	%line{122} %argrw{"wrr"}
+	if		$tmp8 39 39 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:123
+# 		mg[mg_c].depth    = clamp(Furniture2_DepthPos, 0.05, roomDepthMult-0.01); 
+	aref		$tmp9 mg.enabled mg_c 	%line{123} %argrw{"wrr"}
+	aassign		mg.enabled mg_c $const11 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:124
+# 		mg[mg_c].offsetUV = color(m_2_3, tile_Y1, 0);
+	aref		$tmp10 mg.depth mg_c 	%line{124} %argrw{"wrr"}
+	sub		$tmp11 roomDepthMult $const13 	%argrw{"wrr"}
+	functioncall	$const8 34 	%argrw{"r"}
+# C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp12 Furniture2_DepthPos $tmp11 	%filename{"C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h"} %line{141} %argrw{"wrr"}
+	max		$tmp10 $tmp12 $const12 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:124
+# 		mg[mg_c].offsetUV = color(m_2_3, tile_Y1, 0);
+	aassign		mg.depth mg_c $tmp10 	%filename{"shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl"} %line{124} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:125
+# 		mg_c += 1;
+	aref		$tmp13 mg.offsetUV mg_c 	%line{125} %argrw{"wrr"}
+	color		$tmp13 m_2_3 tile_Y1 $const10 	%argrw{"wrrr"}
+	aassign		mg.offsetUV mg_c $tmp13 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:126
+# 	}
+	add		mg_c mg_c $const11 	%line{126} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:129
+# 		mg[mg_c].enabled  = 1;
+	gt		$tmp14 enablePeople $const9 	%line{129} %argrw{"wrr"}
+	if		$tmp14 53 53 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:130
+# 		mg[mg_c].depth    = clamp(People_DepthPos, 0.05, roomDepthMult-0.01); 
+	aref		$tmp15 mg.enabled mg_c 	%line{130} %argrw{"wrr"}
+	aassign		mg.enabled mg_c $const11 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:131
+# 		mg[mg_c].offsetUV = color(m_2_3, tile_Y3, 0);
+	aref		$tmp16 mg.depth mg_c 	%line{131} %argrw{"wrr"}
+	sub		$tmp17 roomDepthMult $const13 	%argrw{"wrr"}
+	functioncall	$const8 48 	%argrw{"r"}
+# C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h:141
+# float  clamp (float x, float minval, float maxval) { return max(min(x,maxval),minval); }
+	min		$tmp18 People_DepthPos $tmp17 	%filename{"C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h"} %line{141} %argrw{"wrr"}
+	max		$tmp16 $tmp18 $const12 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:131
+# 		mg[mg_c].offsetUV = color(m_2_3, tile_Y3, 0);
+	aassign		mg.depth mg_c $tmp16 	%filename{"shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl"} %line{131} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:132
+# 		mg_c += 1;
+	aref		$tmp19 mg.offsetUV mg_c 	%line{132} %argrw{"wrr"}
+	color		$tmp19 m_2_3 tile_Y3 $const10 	%argrw{"wrrr"}
+	aassign		mg.offsetUV mg_c $tmp19 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:133
+# 	}
+	add		mg_c mg_c $const11 	%line{133} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:137
+# 		for (int j = mg_c - 1; j >= 0; --j) {
+	gt		$tmp20 mg_c $const11 	%line{137} %argrw{"wrr"}
+	if		$tmp20 100 100 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:138
+# 			for (int i = 0; i < j; ++i) {
+	for		$tmp22 57 59 99 100 	%line{138} %argrw{"r"}
+	sub		___379_j mg_c $const11 	%argrw{"wrr"}
+	ge		$tmp21 ___379_j $const9 	%argrw{"wrr"}
+	neq		$tmp22 $tmp21 $const9 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:139
+# 				
+	for		$tmp24 61 63 98 99 	%line{139} %argrw{"r"}
+	assign		___381_i $const9 	%argrw{"wr"}
+	lt		$tmp23 ___381_i ___379_j 	%argrw{"wrr"}
+	neq		$tmp24 $tmp23 $const9 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:141
+# 					midGround mg_tmp = mg[i];
+	aref		$tmp25 mg.depth ___381_i 	%line{141} %argrw{"wrr"}
+	add		$tmp26 ___381_i $const11 	%argrw{"wrr"}
+	aref		$tmp27 mg.depth $tmp26 	%argrw{"wrr"}
+	lt		$tmp28 $tmp25 $tmp27 	%argrw{"wrr"}
+	if		$tmp28 98 98 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:142
+# 					mg[i] = mg[i+1];
+	aref		___383_mg_tmp.enabled mg.enabled ___381_i 	%line{142} %argrw{"wrr"}
+	aref		___383_mg_tmp.depth mg.depth ___381_i 	%argrw{"wrr"}
+	aref		___383_mg_tmp.offsetX mg.offsetX ___381_i 	%argrw{"wrr"}
+	aref		___383_mg_tmp.offsetY mg.offsetY ___381_i 	%argrw{"wrr"}
+	aref		___383_mg_tmp.offsetUV mg.offsetUV ___381_i 	%argrw{"wrr"}
+	aref		___383_mg_tmp.UV mg.UV ___381_i 	%argrw{"wrr"}
+	aref		___383_mg_tmp.mask mg.mask ___381_i 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:143
+# 					mg[i+1] = mg_tmp;
+	add		$tmp29 ___381_i $const11 	%line{143} %argrw{"wrr"}
+	aref		$tmp30.enabled mg.enabled $tmp29 	%argrw{"wrr"}
+	aref		$tmp30.depth mg.depth $tmp29 	%argrw{"wrr"}
+	aref		$tmp30.offsetX mg.offsetX $tmp29 	%argrw{"wrr"}
+	aref		$tmp30.offsetY mg.offsetY $tmp29 	%argrw{"wrr"}
+	aref		$tmp30.offsetUV mg.offsetUV $tmp29 	%argrw{"wrr"}
+	aref		$tmp30.UV mg.UV $tmp29 	%argrw{"wrr"}
+	aref		$tmp30.mask mg.mask $tmp29 	%argrw{"wrr"}
+	aassign		mg.enabled ___381_i $tmp30.enabled 	%argrw{"wrr"}
+	aassign		mg.depth ___381_i $tmp30.depth 	%argrw{"wrr"}
+	aassign		mg.offsetX ___381_i $tmp30.offsetX 	%argrw{"wrr"}
+	aassign		mg.offsetY ___381_i $tmp30.offsetY 	%argrw{"wrr"}
+	aassign		mg.offsetUV ___381_i $tmp30.offsetUV 	%argrw{"wrr"}
+	aassign		mg.UV ___381_i $tmp30.UV 	%argrw{"wrr"}
+	aassign		mg.mask ___381_i $tmp30.mask 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:144
+# 				}
+	add		$tmp31 ___381_i $const11 	%line{144} %argrw{"wrr"}
+	aassign		mg.enabled $tmp31 ___383_mg_tmp.enabled 	%argrw{"wrr"}
+	aassign		mg.depth $tmp31 ___383_mg_tmp.depth 	%argrw{"wrr"}
+	aassign		mg.offsetX $tmp31 ___383_mg_tmp.offsetX 	%argrw{"wrr"}
+	aassign		mg.offsetY $tmp31 ___383_mg_tmp.offsetY 	%argrw{"wrr"}
+	aassign		mg.offsetUV $tmp31 ___383_mg_tmp.offsetUV 	%argrw{"wrr"}
+	aassign		mg.UV $tmp31 ___383_mg_tmp.UV 	%argrw{"wrr"}
+	aassign		mg.mask $tmp31 ___383_mg_tmp.mask 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:139
+# 				
+	add		___381_i ___381_i $const11 	%line{139} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:138
+# 			for (int i = 0; i < j; ++i) {
+	sub		___379_j ___379_j $const11 	%line{138} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:161
+#     vector objPOrig	= transform("object", P) * 0.5 + 0.5; // P, I, N, Ng, u, v, dPdu, dPdv, Ps, time, dtime, dPdtime and Ci.
+	neg		$tmp32 I 	%line{161} %argrw{"wr"}
+	functioncall	$const15 103 	%argrw{"r"}
+# C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h:262
+# vector transform (string to, vector p) { return transform("common",to,p); }
+	transformv	objI $const16 $const14 $tmp32 	%filename{"C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h"} %line{262} %argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:162
+#     vector objP 	= transform("object", P) * 0.5 + 0.5;
+	functioncall	$const15 105 	%filename{"shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl"} %line{162} %argrw{"r"}
+# C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h:263
+# point  transform (string to, point p)  { return transform("common",to,p); }
+	transform	$tmp33 $const16 $const14 P 	%filename{"C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h"} %line{263} %argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:162
+#     vector objP 	= transform("object", P) * 0.5 + 0.5;
+	mul		$tmp34 $tmp33 $const17 	%filename{"shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl"} %line{162} %argrw{"wrr"}
+	add		objPOrig $tmp34 $const17 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:163
+# 
+	functioncall	$const15 109 	%line{163} %argrw{"r"}
+# C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h:263
+# point  transform (string to, point p)  { return transform("common",to,p); }
+	transform	$tmp35 $const16 $const14 P 	%filename{"C:\\Users\\Jetpackjules\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python310\\site-packages\\bpy\\3.6\\scripts\\addons\\cycles\\shader/stdosl.h"} %line{263} %argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:163
+# 
+	mul		$tmp36 $tmp35 $const17 	%filename{"shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl"} %line{163} %argrw{"wrr"}
+	add		objP $tmp36 $const17 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:185
+#       objI = vector(objI[0], objI[1], objI[2]); //reorder to match UV for Z up axis
+	gt		$tmp37 zUpAxis $const9 	%line{185} %argrw{"wrr"}
+	if		$tmp37 117 122 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:186
+#     } else {
+	compref		$tmp38 objI $const9 	%line{186} %argrw{"wrr"}
+	compref		$tmp39 objI $const11 	%argrw{"wrr"}
+	compref		$tmp40 objI $const18 	%argrw{"wrr"}
+	vector		objI $tmp38 $tmp39 $tmp40 	%argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:188
+#     }
+	compref		$tmp41 objI $const9 	%line{188} %argrw{"wrr"}
+	compref		$tmp42 objI $const18 	%argrw{"wrr"}
+	neg		$tmp43 $tmp42 	%argrw{"wr"}
+	compref		$tmp44 objI $const11 	%argrw{"wrr"}
+	vector		objI $tmp41 $tmp43 $tmp44 	%argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:191
+# 
+	div		$tmp46 $const2 windowAspect 	%line{191} %argrw{"wrr"}
+	vector		$tmp45 $tmp46 $const2 $const2 	%argrw{"wrrr"}
+	mul		objI objI $tmp45 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:196
+#     color baseDepth = (objP-sections)/(-objI * roomDepthMult);
+	assign		$tmp47 $const10 	%line{196} %argrw{"wr"}
+	step		sections $tmp47 objI 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:197
+#     color baseBack  = (objP-sections)/(-objI);
+	sub		$tmp48 objP sections 	%line{197} %argrw{"wrr"}
+	neg		$tmp49 objI 	%argrw{"wr"}
+	mul		$tmp50 $tmp49 roomDepthMult 	%argrw{"wrr"}
+	div		baseDepth $tmp48 $tmp50 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:198
+#     color baseWidth = baseDepth * roomDepthMult;
+	sub		$tmp51 objP sections 	%line{198} %argrw{"wrr"}
+	neg		$tmp52 objI 	%argrw{"wr"}
+	div		baseBack $tmp51 $tmp52 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:199
+# 
+	mul		baseWidth baseDepth roomDepthMult 	%line{199} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:203
+#     color baseDepthY = (baseDepth[0]*objI+objP + 1);
+	compref		$tmp53 baseDepth $const11 	%line{203} %argrw{"wrr"}
+	mul		$tmp54 $tmp53 objI 	%argrw{"wrr"}
+	add		$tmp55 $tmp54 objP 	%argrw{"wrr"}
+	add		baseDepthX $tmp55 $const2 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:204
+#     color baseWidthX = (baseWidth[1]*objI+objP + 1);
+	compref		$tmp56 baseDepth $const9 	%line{204} %argrw{"wrr"}
+	mul		$tmp57 $tmp56 objI 	%argrw{"wrr"}
+	add		$tmp58 $tmp57 objP 	%argrw{"wrr"}
+	add		baseDepthY $tmp58 $const2 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:205
+#     color baseWidthY = (baseWidth[0]*objI+objP + 1);
+	compref		$tmp59 baseWidth $const11 	%line{205} %argrw{"wrr"}
+	mul		$tmp60 $tmp59 objI 	%argrw{"wrr"}
+	add		$tmp61 $tmp60 objP 	%argrw{"wrr"}
+	add		baseWidthX $tmp61 $const2 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:206
+# 
+	compref		$tmp62 baseWidth $const9 	%line{206} %argrw{"wrr"}
+	mul		$tmp63 $tmp62 objI 	%argrw{"wrr"}
+	add		$tmp64 $tmp63 objP 	%argrw{"wrr"}
+	add		baseWidthY $tmp64 $const2 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:208
+#     float vertU  = baseWidthX[0] - 1;
+	compref		$tmp65 baseDepthY $const18 	%line{208} %argrw{"wrr"}
+	sub		horizU $tmp65 $const17 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:209
+#     float horizV = baseWidthY[1] - 1;
+	compref		$tmp66 baseWidthX $const9 	%line{209} %argrw{"wrr"}
+	sub		vertU $tmp66 $const2 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:210
+#     float vertV  = baseDepthX[2] - 0.5;
+	compref		$tmp67 baseWidthY $const11 	%line{210} %argrw{"wrr"}
+	sub		horizV $tmp67 $const2 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:211
+# 
+	compref		$tmp68 baseDepthX $const18 	%line{211} %argrw{"wrr"}
+	sub		vertV $tmp68 $const17 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:214
+# 	color lWallUV = 0;
+	assign		rWallUV $const9 	%line{214} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:215
+# 	color bWallUV = 0;
+	assign		lWallUV $const9 	%line{215} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:216
+# 	
+	assign		bWallUV $const9 	%line{216} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:218
+#     color FloorCeilUV = color(vertU, vertV, 0) / 3;
+	step		$tmp69 $const10 vertV 	%line{218} %argrw{"wrr"}
+	sub		$tmp72 $const2 vertU 	%argrw{"wrr"}
+	max		$tmp71 vertU $tmp72 	%argrw{"wrr"}
+	sub		$tmp73 $const2 $tmp71 	%argrw{"wrr"}
+	step		$tmp70 $const10 $tmp73 	%argrw{"wrr"}
+	mul		FloorCeilMask $tmp69 $tmp70 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:219
+#     color ceilUV  = (FloorCeilUV + color(m_1_3, m_2_3, 0)) * FloorCeilMask * sections[1];
+	color		$tmp74 vertU vertV $const10 	%line{219} %argrw{"wrrr"}
+	div		FloorCeilUV $tmp74 $const3 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:220
+#     color floorUV = (FloorCeilUV + color(m_1_3, 0, 0)) * FloorCeilMask * (1-sections[1]);
+	color		$tmp75 m_1_3 m_2_3 $const10 	%line{220} %argrw{"wrrr"}
+	add		$tmp76 FloorCeilUV $tmp75 	%argrw{"wrr"}
+	mul		$tmp77 $tmp76 FloorCeilMask 	%argrw{"wrr"}
+	compref		$tmp78 sections $const11 	%argrw{"wrr"}
+	mul		ceilUV $tmp77 $tmp78 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:221
+#     floorUV[1] = (m_1_3 - floorUV[1]) * FloorCeilMask * (1-sections[1]);
+	color		$tmp79 m_1_3 $const10 $const10 	%line{221} %argrw{"wrrr"}
+	add		$tmp80 FloorCeilUV $tmp79 	%argrw{"wrr"}
+	mul		$tmp81 $tmp80 FloorCeilMask 	%argrw{"wrr"}
+	compref		$tmp82 sections $const11 	%argrw{"wrr"}
+	sub		$tmp83 $const2 $tmp82 	%argrw{"wrr"}
+	mul		floorUV $tmp81 $tmp83 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:222
+# 	    	
+	compref		$tmp84 floorUV $const11 	%line{222} %argrw{"wrr"}
+	sub		$tmp85 m_1_3 $tmp84 	%argrw{"wrr"}
+	mul		$tmp86 $tmp85 FloorCeilMask 	%argrw{"wrr"}
+	compref		$tmp87 sections $const11 	%argrw{"wrr"}
+	sub		$tmp88 $const2 $tmp87 	%argrw{"wrr"}
+	mul		$tmp89 $tmp86 $tmp88 	%argrw{"wrr"}
+	compassign	floorUV $const11 $tmp89 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:224
+#     	float sideWallsMask = step(0,horizU) * step(0,1-max(horizV, 1-horizV));
+	gt		$tmp90 enableLeft $const9 	%line{224} %argrw{"wrr"}
+	neq		$tmp91 $tmp90 $const9 	%argrw{"wrr"}
+	if		$tmp91 191 194 	%argrw{"r"}
+	gt		$tmp92 enableRight $const9 	%argrw{"wrr"}
+	neq		$tmp93 $tmp92 $const9 	%argrw{"wrr"}
+	assign		$tmp91 $tmp93 	%argrw{"wr"}
+	if		$tmp91 225 225 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:225
+#     	color sideWallsUV = color(horizU, horizV, 0) / 3;
+	step		$tmp94 $const10 horizU 	%line{225} %argrw{"wrr"}
+	sub		$tmp97 $const2 horizV 	%argrw{"wrr"}
+	max		$tmp96 horizV $tmp97 	%argrw{"wrr"}
+	sub		$tmp98 $const2 $tmp96 	%argrw{"wrr"}
+	step		$tmp95 $const10 $tmp98 	%argrw{"wrr"}
+	mul		___386_sideWallsMask $tmp94 $tmp95 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:226
+#     	if (enableRight  > 0) {
+	color		$tmp99 horizU horizV $const10 	%line{226} %argrw{"wrrr"}
+	div		___386_sideWallsUV $tmp99 $const3 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:227
+#     		rWallUV = (sideWallsUV + color(m_2_3, m_1_3, 0)) * sideWallsMask * sections[0];
+	gt		$tmp100 enableRight $const9 	%line{227} %argrw{"wrr"}
+	if		$tmp100 210 210 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:228
+#     	}
+	color		$tmp101 m_2_3 m_1_3 $const10 	%line{228} %argrw{"wrrr"}
+	add		$tmp102 ___386_sideWallsUV $tmp101 	%argrw{"wrr"}
+	mul		$tmp103 $tmp102 ___386_sideWallsMask 	%argrw{"wrr"}
+	compref		$tmp104 sections $const9 	%argrw{"wrr"}
+	mul		rWallUV $tmp103 $tmp104 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:230
+#     		lWallUV = (sideWallsUV + color(0.0, m_1_3, 0)) * sideWallsMask * (1-sections[0]);
+	gt		$tmp105 enableLeft $const9 	%line{230} %argrw{"wrr"}
+	if		$tmp105 225 225 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:231
+#     		lWallUV[0] = (m_1_3 - lWallUV[0]) * sideWallsMask * (1-sections[0]);
+	color		$tmp106 $const10 m_1_3 $const10 	%line{231} %argrw{"wrrr"}
+	add		$tmp107 ___386_sideWallsUV $tmp106 	%argrw{"wrr"}
+	mul		$tmp108 $tmp107 ___386_sideWallsMask 	%argrw{"wrr"}
+	compref		$tmp109 sections $const9 	%argrw{"wrr"}
+	sub		$tmp110 $const2 $tmp109 	%argrw{"wrr"}
+	mul		lWallUV $tmp108 $tmp110 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:232
+#     	}
+	compref		$tmp111 lWallUV $const9 	%line{232} %argrw{"wrr"}
+	sub		$tmp112 m_1_3 $tmp111 	%argrw{"wrr"}
+	mul		$tmp113 $tmp112 ___386_sideWallsMask 	%argrw{"wrr"}
+	compref		$tmp114 sections $const9 	%argrw{"wrr"}
+	sub		$tmp115 $const2 $tmp114 	%argrw{"wrr"}
+	mul		$tmp116 $tmp113 $tmp115 	%argrw{"wrr"}
+	compassign	lWallUV $const9 $tmp116 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:236
+#     	bWallUV = ((baseBack[2]*objI + (objP/2)/(roomDepthMult)) * (roomDepthMult*2) / 3 + color(m_1_3, m_1_3, 0) ) * (1 - max(step(0,horizU), step(0,vertV)));
+	gt		$tmp117 enableBack $const9 	%line{236} %argrw{"wrr"}
+	if		$tmp117 242 242 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:237
+# 	}
+	compref		$tmp118 baseBack $const18 	%line{237} %argrw{"wrr"}
+	mul		$tmp119 $tmp118 objI 	%argrw{"wrr"}
+	div		$tmp120 objP $const4 	%argrw{"wrr"}
+	div		$tmp121 $tmp120 roomDepthMult 	%argrw{"wrr"}
+	add		$tmp122 $tmp119 $tmp121 	%argrw{"wrr"}
+	mul		$tmp123 roomDepthMult $const4 	%argrw{"wrr"}
+	mul		$tmp124 $tmp122 $tmp123 	%argrw{"wrr"}
+	div		$tmp125 $tmp124 $const3 	%argrw{"wrr"}
+	color		$tmp126 m_1_3 m_1_3 $const10 	%argrw{"wrrr"}
+	add		$tmp127 $tmp125 $tmp126 	%argrw{"wrr"}
+	step		$tmp129 $const10 horizU 	%argrw{"wrr"}
+	step		$tmp130 $const10 vertV 	%argrw{"wrr"}
+	max		$tmp128 $tmp129 $tmp130 	%argrw{"wrr"}
+	sub		$tmp131 $const2 $tmp128 	%argrw{"wrr"}
+	mul		bWallUV $tmp127 $tmp131 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:240
+# 	
+	div		curtainsUV objPOrig $const3 	%line{240} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:242
+# 		mg[i].UV = ((baseBack[2]*objI + (objP)/(mg[i].depth*2)) * (mg[i].depth * 2) / 3);
+	for		$tmp133 245 247 279 280 	%line{242} %argrw{"r"}
+	assign		___390_i $const9 	%argrw{"wr"}
+	lt		$tmp132 ___390_i mg_c 	%argrw{"wrr"}
+	neq		$tmp133 $tmp132 $const9 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:243
+#    		mg[i].mask = step( 0, mg[i].UV[1] * 3 * (1 - mg[i].UV[1]*3) ) * step( 0, mg[i].UV[0] * (1.0/3.0 - mg[i].UV[0]) );
+	aref		$tmp134 mg.UV ___390_i 	%line{243} %argrw{"wrr"}
+	compref		$tmp135 baseBack $const18 	%argrw{"wrr"}
+	mul		$tmp136 $tmp135 objI 	%argrw{"wrr"}
+	aref		$tmp137 mg.depth ___390_i 	%argrw{"wrr"}
+	mul		$tmp138 $tmp137 $const4 	%argrw{"wrr"}
+	div		$tmp139 objP $tmp138 	%argrw{"wrr"}
+	add		$tmp140 $tmp136 $tmp139 	%argrw{"wrr"}
+	aref		$tmp141 mg.depth ___390_i 	%argrw{"wrr"}
+	mul		$tmp142 $tmp141 $const4 	%argrw{"wrr"}
+	mul		$tmp143 $tmp140 $tmp142 	%argrw{"wrr"}
+	div		$tmp134 $tmp143 $const3 	%argrw{"wrr"}
+	aassign		mg.UV ___390_i $tmp134 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:244
+# 	}
+	aref		$tmp144 mg.mask ___390_i 	%line{244} %argrw{"wrr"}
+	aref		$tmp146 mg.UV ___390_i 	%argrw{"wrr"}
+	compref		$tmp147 $tmp146 $const11 	%argrw{"wrr"}
+	mul		$tmp148 $tmp147 $const3 	%argrw{"wrr"}
+	aref		$tmp149 mg.UV ___390_i 	%argrw{"wrr"}
+	compref		$tmp150 $tmp149 $const11 	%argrw{"wrr"}
+	mul		$tmp151 $tmp150 $const3 	%argrw{"wrr"}
+	sub		$tmp152 $const2 $tmp151 	%argrw{"wrr"}
+	mul		$tmp153 $tmp148 $tmp152 	%argrw{"wrr"}
+	step		$tmp145 $const10 $tmp153 	%argrw{"wrr"}
+	aref		$tmp155 mg.UV ___390_i 	%argrw{"wrr"}
+	compref		$tmp156 $tmp155 $const9 	%argrw{"wrr"}
+	div		$tmp157 $const2 $const3 	%argrw{"wrr"}
+	aref		$tmp158 mg.UV ___390_i 	%argrw{"wrr"}
+	compref		$tmp159 $tmp158 $const9 	%argrw{"wrr"}
+	sub		$tmp160 $tmp157 $tmp159 	%argrw{"wrr"}
+	mul		$tmp161 $tmp156 $tmp160 	%argrw{"wrr"}
+	step		$tmp154 $const10 $tmp161 	%argrw{"wrr"}
+	mul		$tmp144 $tmp145 $tmp154 	%argrw{"wrr"}
+	aassign		mg.mask ___390_i $tmp144 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:242
+# 		mg[i].UV = ((baseBack[2]*objI + (objP)/(mg[i].depth*2)) * (mg[i].depth * 2) / 3);
+	add		___390_i ___390_i $const11 	%line{242} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:248
+# 
+	add		$tmp162 ceilUV floorUV 	%line{248} %argrw{"wrr"}
+	add		$tmp163 $tmp162 bWallUV 	%argrw{"wrr"}
+	add		$tmp164 $tmp163 lWallUV 	%argrw{"wrr"}
+	add		finalUV $tmp164 rWallUV 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:252
+# 
+	compref		$tmp165 finalUV $const9 	%line{252} %argrw{"wrr"}
+	eq		$tmp166 $tmp165 $const9 	%argrw{"wrr"}
+	neq		$tmp167 $tmp166 $const9 	%argrw{"wrr"}
+	if		$tmp167 292 292 	%argrw{"r"}
+	compref		$tmp168 finalUV $const11 	%argrw{"wrr"}
+	eq		$tmp169 $tmp168 $const9 	%argrw{"wrr"}
+	neq		$tmp170 $tmp169 $const9 	%argrw{"wrr"}
+	assign		$tmp167 $tmp170 	%argrw{"wr"}
+	if		$tmp167 294 294 	%argrw{"r"}
+	assign		finalAlpha $const9 	%argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:256
+#     	finalUV[0] = 1-finalUV[0];
+	gt		$tmp171 textureFlop $const9 	%line{256} %argrw{"wrr"}
+	if		$tmp171 302 302 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:257
+#     	curtainsUV[0]  = m_1_3 - curtainsUV[0];
+	compref		$tmp172 finalUV $const9 	%line{257} %argrw{"wrr"}
+	sub		$tmp173 $const2 $tmp172 	%argrw{"wrr"}
+	compassign	finalUV $const9 $tmp173 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:258
+#     }
+	compref		$tmp174 curtainsUV $const9 	%line{258} %argrw{"wrr"}
+	sub		$tmp175 m_1_3 $tmp174 	%argrw{"wrr"}
+	compassign	curtainsUV $const9 $tmp175 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:261
+#     	//UV 0,0 : Left-Bottom corner / texture 0,0 : Left-Top corner 
+	lt		$tmp176 textureFlip $const11 	%line{261} %argrw{"wrr"}
+	if		$tmp176 310 310 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:264
+#         curtainsUV[1]  = m_1_3 - curtainsUV[1];
+	compref		$tmp177 finalUV $const11 	%line{264} %argrw{"wrr"}
+	sub		$tmp178 $const2 $tmp177 	%argrw{"wrr"}
+	compassign	finalUV $const11 $tmp178 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:265
+#     }
+	compref		$tmp179 curtainsUV $const11 	%line{265} %argrw{"wrr"}
+	sub		$tmp180 m_1_3 $tmp179 	%argrw{"wrr"}
+	compassign	curtainsUV $const11 $tmp180 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:269
+#  
+	compref		$tmp181 finalUV $const9 	%line{269} %argrw{"wrr"}
+	gt		$tmp182 $tmp181 $const9 	%argrw{"wrr"}
+	neq		$tmp183 $tmp182 $const9 	%argrw{"wrr"}
+	if		$tmp183 314 318 	%argrw{"r"}
+	compref		$tmp184 finalUV $const11 	%argrw{"wrr"}
+	gt		$tmp185 $tmp184 $const9 	%argrw{"wrr"}
+	neq		$tmp186 $tmp185 $const9 	%argrw{"wrr"}
+	assign		$tmp183 $tmp186 	%argrw{"wr"}
+	if		$tmp183 322 322 	%argrw{"r"}
+	compref		$tmp187 finalUV $const9 	%argrw{"wrr"}
+	compref		$tmp188 finalUV $const11 	%argrw{"wrr"}
+	texture		finalRGB filename $tmp187 $tmp188 	%argrw{"wrrr"} %argderivs{2,3}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:274
+#  		
+	for		$tmp190 324 326 370 371 	%line{274} %argrw{"r"}
+	assign		___396_i $const9 	%argrw{"wr"}
+	lt		$tmp189 ___396_i mg_c 	%argrw{"wrr"}
+	neq		$tmp190 $tmp189 $const9 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:276
+#  		
+	aref		$tmp191 mg.UV ___396_i 	%line{276} %argrw{"wrr"}
+	assign		___397_mgUV $tmp191 	%argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:278
+#  		if (textureFlip < 1){mgUV[1] = m_1_3 - mgUV[1];}
+	gt		$tmp192 textureFlop $const9 	%line{278} %argrw{"wrr"}
+	if		$tmp192 333 333 	%argrw{"r"}
+	compref		$tmp193 ___397_mgUV $const9 	%argrw{"wrr"}
+	sub		$tmp194 m_1_3 $tmp193 	%argrw{"wrr"}
+	compassign	___397_mgUV $const9 $tmp194 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:279
+#  		
+	lt		$tmp195 textureFlip $const11 	%line{279} %argrw{"wrr"}
+	if		$tmp195 338 338 	%argrw{"r"}
+	compref		$tmp196 ___397_mgUV $const11 	%argrw{"wrr"}
+	sub		$tmp197 m_1_3 $tmp196 	%argrw{"wrr"}
+	compassign	___397_mgUV $const11 $tmp197 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:281
+#  	
+	compref		$tmp198 ___397_mgUV $const9 	%line{281} %argrw{"wrr"}
+	gt		$tmp199 $tmp198 $const13 	%argrw{"wrr"}
+	neq		$tmp200 $tmp199 $const9 	%argrw{"wrr"}
+	if		$tmp200 346 346 	%argrw{"r"}
+	compref		$tmp201 ___397_mgUV $const9 	%argrw{"wrr"}
+	lt		$tmp202 $tmp201 $const20 	%argrw{"wrr"}
+	neq		$tmp203 $tmp202 $const9 	%argrw{"wrr"}
+	assign		$tmp200 $tmp203 	%argrw{"wr"}
+	neq		$tmp204 $tmp200 $const9 	%argrw{"wrr"}
+	if		$tmp204 352 352 	%argrw{"r"}
+	compref		$tmp205 ___397_mgUV $const11 	%argrw{"wrr"}
+	gt		$tmp206 $tmp205 $const13 	%argrw{"wrr"}
+	neq		$tmp207 $tmp206 $const9 	%argrw{"wrr"}
+	assign		$tmp204 $tmp207 	%argrw{"wr"}
+	neq		$tmp208 $tmp204 $const9 	%argrw{"wrr"}
+	if		$tmp208 358 358 	%argrw{"r"}
+	compref		$tmp209 ___397_mgUV $const11 	%argrw{"wrr"}
+	lt		$tmp210 $tmp209 $const20 	%argrw{"wrr"}
+	neq		$tmp211 $tmp210 $const9 	%argrw{"wrr"}
+	assign		$tmp208 $tmp211 	%argrw{"wr"}
+	if		$tmp208 370 370 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:283
+# 		
+	aref		$tmp212 mg.offsetUV ___396_i 	%line{283} %argrw{"wrr"}
+	add		___397_mgUV ___397_mgUV $tmp212 	%argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:286
+#         	finalRGB = mix(finalRGB, midgroundRGB, midgroundAlpha * mg[i].mask);
+	compref		$tmp213 ___397_mgUV $const9 	%line{286} %argrw{"wrr"}
+	compref		$tmp214 ___397_mgUV $const11 	%argrw{"wrr"}
+	texture		___400_midgroundRGB filename $tmp213 $tmp214 $const21 ___400_midgroundAlpha 	%argrw{"wrrrrw"} %argderivs{2,3}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:287
+# 
+	aref		$tmp215 mg.mask ___396_i 	%line{287} %argrw{"wrr"}
+	mul		$tmp216 ___400_midgroundAlpha $tmp215 	%argrw{"wrr"}
+	mix		finalRGB finalRGB ___400_midgroundRGB $tmp216 	%argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:289
+# 		}
+	aref		$tmp217 mg.mask ___396_i 	%line{289} %argrw{"wrr"}
+	mul		$tmp218 ___400_midgroundAlpha $tmp217 	%argrw{"wrr"}
+	mix		finalAlpha finalAlpha $const2 $tmp218 	%argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:274
+#  		
+	add		___396_i ___396_i $const11 	%line{274} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:295
+#     	
+	gt		$tmp219 enableCurtains $const9 	%line{295} %argrw{"wrr"}
+	if		$tmp219 379 379 	%argrw{"r"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:297
+# 
+	add		curtainsUV curtainsUV curtains_OffsetUV 	%line{297} %argrw{"wrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:300
+#         finalRGB = mix(finalRGB,curtainsRGB,curtainsA);
+	compref		$tmp220 curtainsUV $const9 	%line{300} %argrw{"wrr"}
+	compref		$tmp221 curtainsUV $const11 	%argrw{"wrr"}
+	texture		___401_curtainsRGB filename $tmp220 $tmp221 $const21 ___401_curtainsA 	%argrw{"wrrrrw"} %argderivs{2,3}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:301
+# 
+	mix		finalRGB finalRGB ___401_curtainsRGB ___401_curtainsA 	%line{301} %argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:303
+#     }
+	mix		finalAlpha finalAlpha $const2 ___401_curtainsA 	%line{303} %argrw{"wrrr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:331
+#     out_Alpha = finalAlpha;
+	assign		out_RGB finalRGB 	%line{331} %argrw{"wr"}
+# shader\\OSL_Shaders\\jiWindowBox_All_v1_10.osl:332
+# 
+	assign		out_Alpha finalAlpha 	%line{332} %argrw{"wr"}
+	end

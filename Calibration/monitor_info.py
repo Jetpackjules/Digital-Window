@@ -14,6 +14,7 @@ def get_monitor_dimensions():
         monitor = monitors[0]  # Get the primary monitor
         width = monitor.width
         height = monitor.height
+
         return (width/dpi)*2.54/100, (height/dpi)*2.54/100, dpi
     else:
         raise Exception("No monitors detected!")
