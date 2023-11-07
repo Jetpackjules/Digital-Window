@@ -12,7 +12,7 @@ MARKER_LENGTH = 0.018
 # ...
 PATH_TO_YOUR_IMAGES = 'Calibration/Images'
 
-NAME = "Desktop_Webcam" # cam name
+NAME = "Iphone_0.5" # cam name
 # ------------------------------
 
 def calibrate_and_save_parameters():

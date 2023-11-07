@@ -19,7 +19,18 @@ from Calibration import monitor_info
 from Tools import fov_calculator
 
 
-monitor_width, monitor_height, monitor_dpi = monitor_info.get_monitor_dimensions()
+monitor_width, monitor_height, monitor_dpi = monitor_info.get_monitor_dimensions() #Display size in meters, with pixels per inch as the last var
+
+
+cubemap_images = [
+    
+    "Cubemap/posx.png",
+    "Cubemap/negx.png",
+    "Cubemap/posy.png",
+    "Cubemap/negy.png",
+    "Cubemap/posz.png",
+    "Cubemap/negz.png"
+]
 
 
 def update(x, y, dist):
@@ -28,8 +39,13 @@ def update(x, y, dist):
 
         fov = 120
         # fov_calculator.calculate_window_fov(monitor_width, monitor_height, dist, 150)
-        print(dist)
-        print(monitor_width)
+        # print(dist)
+        # print(monitor_width)
+
+        # add webcam offset:
+        offset = monitor_height/2
+
+
         X_offset = x
         Y_offset = y
         distance_to_monitor = dist
@@ -43,7 +59,20 @@ def run_window():
             return
         window_running = True
 
-    aspect_ratio = 800.0 / 600.0
+    # Set the FOV to 90 degrees
+    fov = 90
+
+    # Load one of the cubemap images to determine its dimensions
+    image_sample = Image.open(cubemap_images[0])
+    cubemap_width, cubemap_height = image_sample.size
+    cubemap_aspect_ratio = cubemap_width / cubemap_height
+
+    # Adjust the window's aspect ratio based on the cubemap and monitor dimensions
+    aspect_ratio = monitor_width / monitor_height
+
+    if cubemap_aspect_ratio > aspect_ratio:
+        aspect_ratio = cubemap_aspect_ratio
+
     near_plane = 0.1
     far_plane = 1900.0
     q = 1.0 / np.tan(np.radians(0.5 * fov))
@@ -76,21 +105,20 @@ def run_window():
 
     if not glfw.init():
         raise Exception("glfw can not be initialized!")
-    window = glfw.create_window(800, 600, "Cubemap Viewer", None, None)
+    
+
+    
+    glfw.window_hint(glfw.DECORATED, glfw.FALSE)
+
+    # Create the window with the monitor's dimensions
+    window = glfw.create_window(int(monitor_width*100/2.54*monitor_dpi), int(monitor_height*100/2.54*monitor_dpi), "Cubemap Viewer", None, None)
+ 
     if not window:
         glfw.terminate()
         raise Exception("glfw window can not be created!")
-    glfw.set_window_pos(window, 400, 200)
+    glfw.set_window_pos(window, 0, 0)
     glfw.make_context_current(window)
 
-    cubemap_images = [
-        "C:/Users/Jetpackjules/OneDrive - UW/Projects/Digital Window/Cubemap/posx.png",
-        "C:/Users/Jetpackjules/OneDrive - UW/Projects/Digital Window/Cubemap/negx.png",
-        "C:/Users/Jetpackjules/OneDrive - UW/Projects/Digital Window/Cubemap/posy.png",
-        "C:/Users/Jetpackjules/OneDrive - UW/Projects/Digital Window/Cubemap/negy.png",
-        "C:/Users/Jetpackjules/OneDrive - UW/Projects/Digital Window/Cubemap/posz.png",
-        "C:/Users/Jetpackjules/OneDrive - UW/Projects/Digital Window/Cubemap/negz.png"
-    ]
 
     cubemap = glGenTextures(1)
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap)
@@ -135,6 +163,12 @@ def run_window():
         -1,  1, -1,  1,  1, -1,  1,  1,  1,  1,  1,  1, -1,  1,  1, -1,  1, -1,
         -1, -1, -1, -1, -1,  1,  1, -1, -1,  1, -1, -1, -1, -1,  1,  1, -1,  1
     ], dtype=np.float32)
+    
+    # Remove the fourth set of 18 vertices
+    start_index = 3 * 18  # Starting index for the fourth set of 18 vertices
+    end_index = start_index + 18  # Ending index
+    vertices = np.delete(vertices, slice(start_index, end_index), axis=0)  # Remove the fourth set of 18 vertices
+        
     VBO = glGenBuffers(1)
     glBindBuffer(GL_ARRAY_BUFFER, VBO)
     glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)

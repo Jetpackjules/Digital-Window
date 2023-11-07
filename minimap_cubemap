@@ -18,7 +18,7 @@ Y_OFFSET = 400
 #important variables:
 #big one is 7cm
 #med is .048 Mcc
-markerLength = 0.07 #meters
+markerLength = 0.048 #meters
 
 # Minimap resolution
 MINIMAP_WIDTH = 720
@@ -182,7 +182,14 @@ while True:
         draw_arrow(mini_map, position, smoothed_yaw)
         # print(tvec[0][0])
         # cube_render.update_perspective(
-        Perspective_Manager.update(-tvec[0][0], tvec[0][1], tvec[0][2])
+
+        #webcam offset:
+        offset = round(MONITOR_HEIGHT/2, 4)
+        # print(MONITOR_HEIGHT/2)
+        offset = 0
+
+
+        Perspective_Manager.update(-tvec[0][0], tvec[0][1]-offset, tvec[0][2])
         # Draw the rotation vectors on the frame
         for i in range(len(rvecs)):
             mirrored_frame = cv2.drawFrameAxes(mirrored_frame, cameraMatrix, distCoeffs, rvecs[i], tvecs[i], 0.03)

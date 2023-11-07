@@ -14,7 +14,7 @@ MARGIN_PX = 20    # size of the margin in pixels
 SAVE_NAME = 'Calibration/ChArUco_Marker.png'
 PATH_TO_YOUR_IMAGES = "Calibration/Images/"
 
-NAME = "Phone_Cam"
+NAME = "Iphone_0.5"
 # ------------------------------
 
 

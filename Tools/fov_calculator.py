@@ -21,7 +21,7 @@ def calculate_window_fov(width, height, distance, observer_fov):
     half_width_view = math.tan(half_fov_rad) * distance
     
     # Calculate the half FOV of the window's view using the inverse tangent function
-    half_window_fov_rad = math.atan((width / 2) / distance)
+    half_window_fov_rad = math.atan((height / 2) / distance)
     
     # Convert the half FOV of the window's view to degrees and multiply by 2 to get the full FOV
     window_fov_deg = math.degrees(half_window_fov_rad) * 2
@@ -29,9 +29,10 @@ def calculate_window_fov(width, height, distance, observer_fov):
     return window_fov_deg
 
 # Example usage:
+
 width = 0.5976664807585054  # in meters
-height = 0.3361873954266592  # in meters
+height = 0.18887491727332897  # in meters
 distance = 0.1  # in meters
-observer_fov = 150.0  # in degrees
+observer_fov = 90.0  # in degrees
 
 print("WINDOW FOV: ", calculate_window_fov(width, height, distance, observer_fov))
